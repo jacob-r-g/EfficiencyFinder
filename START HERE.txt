@@ -13,3 +13,7 @@ Always use Setup EfficiencyFinder.command to open the app.
 Do not double-click EfficiencyFinder.app by itself — it may not find the setup on some Macs.
 
 If anything fails, check setup.log and launch.log in this folder.
+
+If setup keeps repeating: delete the hidden .venv folder inside EfficiencyFinder
+(Finder > View > Show Path Bar, then look for .venv), then run Setup again.
+Python 3.12 from python.org is the most reliable version.
