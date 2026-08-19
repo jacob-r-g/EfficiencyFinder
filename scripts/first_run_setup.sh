@@ -81,7 +81,7 @@ Common fixes:
     return 1
   }
 
-  macos_alert "Setup finished. EfficiencyFinder will open now."
+  macos_alert "Setup finished. You can close this Terminal window after the app opens."
   return 0
 }
 

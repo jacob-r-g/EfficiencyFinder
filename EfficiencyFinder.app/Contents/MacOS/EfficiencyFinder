@@ -1,40 +1,22 @@
 #!/bin/bash
-# Double-click launcher. Runs one-time setup automatically on first launch.
+# Optional Finder shortcut. Prefer Setup EfficiencyFinder.command to open the app.
 
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="$(cd "$HERE/../../.." && pwd)"
-PYTHON="$PROJECT/.venv/bin/python"
-MAIN="$PROJECT/main.py"
-SETUP="$PROJECT/scripts/first_run_setup.sh"
+LAUNCH="$PROJECT/scripts/launch_app.sh"
 DIALOG="$PROJECT/scripts/macos_dialog.sh"
 
-if [[ -f "$DIALOG" ]]; then
-  # shellcheck source=macos_dialog.sh
-  source "$DIALOG"
-fi
+if [[ ! -f "$LAUNCH" ]]; then
+  if [[ -f "$DIALOG" ]]; then
+    # shellcheck source=macos_dialog.sh
+    source "$DIALOG"
+    macos_alert_error "Please use Setup EfficiencyFinder.command to open EfficiencyFinder.
 
-if [[ ! -f "$MAIN" ]]; then
-  macos_alert_error "EfficiencyFinder could not find main.py.
-
-Keep EfficiencyFinder.app in the project folder (next to main.py)."
+Keep EfficiencyFinder.app inside the project folder next to main.py."
+  fi
   exit 1
 fi
 
-chmod +x "$SETUP" 2>/dev/null || true
-if [[ ! -f "$SETUP" ]]; then
-  macos_alert_error "Setup script missing:
-
-$SETUP"
-  exit 1
-fi
-
-# First launch (or broken venv): install dependencies automatically.
-if ! bash "$SETUP" "$PROJECT" --check-only; then
-  bash "$SETUP" "$PROJECT" || exit 1
-fi
-
-cd "$PROJECT"
-export PYTHONUNBUFFERED=1
-exec "$PYTHON" "$MAIN"
+EFFICIENCYFINDER_ROOT="$PROJECT" exec bash "$LAUNCH"
