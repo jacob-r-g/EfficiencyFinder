@@ -1,0 +1,39 @@
+#!/bin/bash
+# Double-clickable launcher: finds the project folder next to this .app
+# and starts the GUI without you opening Terminal.
+
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+PROJECT="$(cd "$HERE/../../.." && pwd)"
+PYTHON="$PROJECT/.venv/bin/python"
+MAIN="$PROJECT/main.py"
+
+if [[ ! -x "$PYTHON" ]]; then
+  osascript <<EOF
+display dialog "EfficiencyFinder could not find its Python environment.
+
+Expected:
+$PYTHON
+
+In Terminal, run:
+  cd \"$PROJECT\"
+  python3 -m venv .venv
+  .venv/bin/pip install -r requirements.txt" buttons {"OK"} default button 1 with icon stop with title "EfficiencyFinder"
+EOF
+  exit 1
+fi
+
+if [[ ! -f "$MAIN" ]]; then
+  osascript <<EOF
+display dialog "EfficiencyFinder could not find main.py in:
+$PROJECT
+
+Keep EfficiencyFinder.app in the project folder (next to main.py)." buttons {"OK"} default button 1 with icon stop with title "EfficiencyFinder"
+EOF
+  exit 1
+fi
+
+cd "$PROJECT"
+export PYTHONUNBUFFERED=1
+exec "$PYTHON" "$MAIN"
