@@ -1,22 +1,34 @@
 #!/bin/bash
-# Optional Finder shortcut. Prefer Setup EfficiencyFinder.command to open the app.
+# Finder / Dock launcher. Finds the real project folder even if macOS
+# temporarily copied this .app (App Translocation).
 
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-PROJECT="$(cd "$HERE/../../.." && pwd)"
-LAUNCH="$PROJECT/scripts/launch_app.sh"
-DIALOG="$PROJECT/scripts/macos_dialog.sh"
+SCRIPTS="$(cd "$HERE/../../../scripts" 2>/dev/null && pwd || true)"
 
-if [[ ! -f "$LAUNCH" ]]; then
-  if [[ -f "$DIALOG" ]]; then
-    # shellcheck source=macos_dialog.sh
-    source "$DIALOG"
-    macos_alert_error "Please use Setup EfficiencyFinder.command to open EfficiencyFinder.
-
-Keep EfficiencyFinder.app inside the project folder next to main.py."
+# Prefer scripts next to a non-translocated copy via saved path.
+if [[ -f "${HOME}/Library/Application Support/EfficiencyFinder/install_root.txt" ]]; then
+  ROOT="$(<"${HOME}/Library/Application Support/EfficiencyFinder/install_root.txt")"
+  if [[ -f "$ROOT/scripts/launch_app.sh" ]]; then
+    exec bash "$ROOT/scripts/launch_app.sh" "$ROOT"
   fi
-  exit 1
 fi
 
-EFFICIENCYFINDER_ROOT="$PROJECT" exec bash "$LAUNCH"
+if [[ -n "$SCRIPTS" && -f "$SCRIPTS/launch_app.sh" && "$HERE" != *AppTranslocation* ]]; then
+  exec bash "$SCRIPTS/launch_app.sh" "$HERE/../../.."
+fi
+
+# Last resort: search common locations.
+for candidate in \
+  "/Applications/EfficiencyFinder" \
+  "${HOME}/Applications/EfficiencyFinder" \
+  "${HOME}/Desktop/EfficiencyFinder" \
+  "${HOME}/Downloads/EfficiencyFinder"; do
+  if [[ -f "$candidate/scripts/launch_app.sh" ]]; then
+    exec bash "$candidate/scripts/launch_app.sh" "$candidate"
+  fi
+done
+
+osascript -e 'display dialog "Please double-click Setup EfficiencyFinder.command in the EfficiencyFinder folder (the folder that also contains main.py)." buttons {"OK"} default button 1 with title "EfficiencyFinder" with icon note' >/dev/null
+exit 1
