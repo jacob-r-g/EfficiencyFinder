@@ -7,5 +7,7 @@ Open this folder, then:
 
 If a black Terminal window appears, that is normal — leave it until setup is done.
 
+You may see a one-line message about zsh when Terminal opens. That is harmless — ignore it.
+
 You only need to do this once. After that, EfficiencyFinder.app should open on its own.
 If the app still does not open, run Setup EfficiencyFinder.command again.
