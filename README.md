@@ -12,9 +12,15 @@ It reports, per sample:
 
 ## Run
 
-**macOS (one click):** double-click `EfficiencyFinder.app`, or the Desktop/Dock shortcut. Keep the `.app` next to `main.py`.
+**macOS (recommended):** unzip the folder, then double-click **`EfficiencyFinder.app`**.
 
-**From a terminal:**
+The first launch runs a one-time setup automatically (downloads libraries, 2–5 minutes, internet required). After that, just open the app as usual. Keep `EfficiencyFinder.app` in the project folder next to `main.py`.
+
+If setup fails or you move the folder, double-click **`Setup EfficiencyFinder.command`** to install or repair, then open the app.
+
+**What to send a friend:** zip the project **without** the `.venv` folder (~10 MB). They do not need Terminal.
+
+**From a terminal (optional):**
 
 ```bash
 python3 -m venv .venv

@@ -1,37 +1,31 @@
 #!/bin/bash
-# Double-clickable launcher: finds the project folder next to this .app
-# and starts the GUI without you opening Terminal.
+# Double-click launcher. Runs one-time setup automatically on first launch.
 
-set -euo pipefail
+set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="$(cd "$HERE/../../.." && pwd)"
 PYTHON="$PROJECT/.venv/bin/python"
 MAIN="$PROJECT/main.py"
+SETUP="$PROJECT/scripts/first_run_setup.sh"
 
-if [[ ! -x "$PYTHON" ]]; then
-  osascript <<EOF
-display dialog "EfficiencyFinder could not find its Python environment.
+if [[ ! -f "$MAIN" ]]; then
+  osascript -e "display dialog \"EfficiencyFinder could not find main.py.
 
-Expected:
-$PYTHON
-
-In Terminal, run:
-  cd \"$PROJECT\"
-  python3 -m venv .venv
-  .venv/bin/pip install -r requirements.txt" buttons {"OK"} default button 1 with icon stop with title "EfficiencyFinder"
-EOF
+Keep EfficiencyFinder.app in the project folder (next to main.py).\" buttons {\"OK\"} default button 1 with icon stop with title \"EfficiencyFinder\""
   exit 1
 fi
 
-if [[ ! -f "$MAIN" ]]; then
-  osascript <<EOF
-display dialog "EfficiencyFinder could not find main.py in:
-$PROJECT
+if [[ ! -x "$SETUP" ]]; then
+  osascript -e "display dialog \"Setup script missing:
 
-Keep EfficiencyFinder.app in the project folder (next to main.py)." buttons {"OK"} default button 1 with icon stop with title "EfficiencyFinder"
-EOF
+$SETUP\" buttons {\"OK\"} default button 1 with icon stop with title \"EfficiencyFinder\""
   exit 1
+fi
+
+# First launch (or broken venv): install dependencies automatically.
+if ! bash "$SETUP" "$PROJECT" --check-only; then
+  bash "$SETUP" "$PROJECT" || exit 1
 fi
 
 cd "$PROJECT"
