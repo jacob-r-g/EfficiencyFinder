@@ -8,19 +8,25 @@ PROJECT="$(cd "$HERE/../../.." && pwd)"
 PYTHON="$PROJECT/.venv/bin/python"
 MAIN="$PROJECT/main.py"
 SETUP="$PROJECT/scripts/first_run_setup.sh"
+DIALOG="$PROJECT/scripts/macos_dialog.sh"
+
+if [[ -f "$DIALOG" ]]; then
+  # shellcheck source=macos_dialog.sh
+  source "$DIALOG"
+fi
 
 if [[ ! -f "$MAIN" ]]; then
-  osascript -e "display dialog \"EfficiencyFinder could not find main.py.
+  macos_alert_error "EfficiencyFinder could not find main.py.
 
-Keep EfficiencyFinder.app in the project folder (next to main.py).\" buttons {\"OK\"} default button 1 with icon stop with title \"EfficiencyFinder\""
+Keep EfficiencyFinder.app in the project folder (next to main.py)."
   exit 1
 fi
 
 chmod +x "$SETUP" 2>/dev/null || true
 if [[ ! -f "$SETUP" ]]; then
-  osascript -e "display dialog \"Setup script missing:
+  macos_alert_error "Setup script missing:
 
-$SETUP\" buttons {\"OK\"} default button 1 with icon stop with title \"EfficiencyFinder\""
+$SETUP"
   exit 1
 fi
 
