@@ -8,6 +8,7 @@ from pathlib import Path
 from .alleles import call_alleles_for_sample
 from .classify import classify_reads
 from .editing import GuideEfficiency, call_editing_status, summarize_efficiency
+from .excision import ExcisionSizeRow, ExcisionSummary, call_paired_excisions
 from .indel_frame import classify_frame, extract_allele
 from .parsing import ReferenceSet, parse_fastq
 from .settings import PipelineSettings
@@ -82,6 +83,8 @@ class SampleResult:
     allele_summaries: list[AlleleSummary]
     allele_details: list[AlleleDetail]
     indel_sizes: list[int]  # non-artifact sizes (includes WT 0) for histogram filtering
+    excision_summaries: list[ExcisionSummary]
+    excision_sizes: list[ExcisionSizeRow]
 
 
 @dataclass
@@ -93,6 +96,8 @@ class BatchResult:
     allele_details: list[AlleleDetail] = field(default_factory=list)
     shared_alleles: list[SharedAllele] = field(default_factory=list)
     indel_sizes: list[int] = field(default_factory=list)
+    excision_summaries: list[ExcisionSummary] = field(default_factory=list)
+    excision_sizes: list[ExcisionSizeRow] = field(default_factory=list)
     n_reads: int = 0
     n_assigned: int = 0
     n_unassigned: int = 0
@@ -236,6 +241,14 @@ def run_single_sample(
     indel_summaries, allele_summaries, allele_details, indel_sizes = (
         _analyze_guide_indels_and_alleles(classified, ref_set, settings, name)
     )
+    excision_summaries, excision_sizes = call_paired_excisions(
+        classified,
+        calls,
+        ref_set.guides,
+        ref_set.guides_by_amplicon,
+        settings=settings,
+        sample=name,
+    )
     return SampleResult(
         sample_name=name,
         fastq_path=fastq_path,
@@ -248,6 +261,8 @@ def run_single_sample(
         allele_summaries=allele_summaries,
         allele_details=allele_details,
         indel_sizes=indel_sizes,
+        excision_summaries=excision_summaries,
+        excision_sizes=excision_sizes,
     )
 
 
@@ -307,6 +322,8 @@ def run_batch(
         allele_details=details,
         shared_alleles=_shared_alleles(details),
         indel_sizes=[z for s in samples for z in s.indel_sizes],
+        excision_summaries=[row for s in samples for row in s.excision_summaries],
+        excision_sizes=[row for s in samples for row in s.excision_sizes],
         n_reads=sum(s.n_reads for s in samples),
         n_assigned=sum(s.n_assigned for s in samples),
         n_unassigned=sum(s.n_unassigned for s in samples),
