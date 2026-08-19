@@ -136,6 +136,7 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(by_guide[GUIDE2A_NAME].wt_unedited, 3)
             self.assertEqual(by_guide[GUIDE2B_NAME].wt_unedited, 3)
             self.assertEqual(len(result.indel_summaries), 2)
+            self.assertEqual(result.excision_summaries[0].n_simultaneous_large_del, 0)
 
     def test_histogram_export(self):
         with tempfile.TemporaryDirectory() as td:

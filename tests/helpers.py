@@ -31,6 +31,10 @@ AMP2 = LEFT + GUIDE1 + MID + GUIDE2 + RIGHT
 AMP2_NAME = "Line26"
 GUIDE2A_NAME = "Line26_G1"
 GUIDE2B_NAME = "Line26_G2"
+GUIDE2_START = len(LEFT) + len(GUIDE1) + len(MID)
+GUIDE2_END = GUIDE2_START + len(GUIDE2)
+# Full paired-guide excision: drop both targets and the intervening fragment.
+AMP2_EXCISION = LEFT + RIGHT
 
 
 def write_fasta(path: Path, entries: dict[str, str]) -> Path:

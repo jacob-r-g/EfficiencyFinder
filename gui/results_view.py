@@ -88,6 +88,28 @@ SHARED_ALLELE_COLS = [
     ("allele_seq", "allele_seq"),
 ]
 
+EXCISION_COLS = [
+    ("sample", "sample"),
+    ("amplicon", "amplicon"),
+    ("guides", "guides"),
+    ("n_guides", "n_guides"),
+    ("expected_dropout_bp", "expected_dropout_bp"),
+    ("n_spanning_reads", "n_spanning_reads"),
+    ("n_simultaneous_large_del", "n_simultaneous_large_del"),
+    ("pct_simultaneous_large_del", "pct_simultaneous_large_del"),
+    ("n_confirmed_excision", "n_confirmed_excision"),
+    ("pct_confirmed_excision", "pct_confirmed_excision"),
+    ("median_excision_bp", "median_excision_bp"),
+]
+
+EXCISION_SIZE_COLS = [
+    ("sample", "sample"),
+    ("amplicon", "amplicon"),
+    ("excision_size_bp", "excision_size_bp"),
+    ("n_reads", "n_reads"),
+    ("pct_of_confirmed", "pct_of_confirmed"),
+]
+
 
 class _FilterProxy(QSortFilterProxyModel):
     def __init__(self, parent=None):
@@ -164,6 +186,7 @@ class ResultsView(QWidget):
         super().__init__(parent)
         self._batch: BatchResult | None = None
         self._all_details: list[dict] = []
+        self._all_excision_sizes: list[dict] = []
 
         hist_btn = QPushButton("Export indel size histogram (PNG)")
         hist_btn.clicked.connect(self._export_histogram)
@@ -209,6 +232,39 @@ class ResultsView(QWidget):
 
         self.shared = _TableTab(SHARED_ALLELE_COLS, "shared_alleles.csv")
 
+        self.excision = _TableTab(EXCISION_COLS, "paired_excision.csv")
+        self.excision_size_model = DictTableModel(EXCISION_SIZE_COLS)
+        self.excision_size_view, self.excision_size_proxy = _make_table(
+            self.excision_size_model
+        )
+        size_filter = QLineEdit()
+        size_filter.setPlaceholderText("Filter excision sizes…")
+        size_filter.setClearButtonEnabled(True)
+        size_filter.textChanged.connect(self.excision_size_proxy.setFilterFixedString)
+        size_export = QPushButton("Export sizes CSV")
+        size_export.clicked.connect(
+            lambda: export_view_csv(
+                self.excision_size_view, self, "paired_excision_sizes.csv"
+            )
+        )
+        size_top = QHBoxLayout()
+        self._excision_size_label = QLabel(
+            "Confirmed excision sizes (select a summary row)"
+        )
+        size_top.addWidget(self._excision_size_label, 1)
+        size_top.addWidget(size_filter, 1)
+        size_top.addWidget(size_export)
+        size_wrap = QWidget()
+        size_layout = QVBoxLayout(size_wrap)
+        size_layout.setContentsMargins(0, 0, 0, 0)
+        size_layout.addLayout(size_top)
+        size_layout.addWidget(self.excision_size_view)
+        excision_split = QSplitter(Qt.Orientation.Vertical)
+        excision_split.addWidget(self.excision)
+        excision_split.addWidget(size_wrap)
+        excision_split.setStretchFactor(0, 1)
+        excision_split.setStretchFactor(1, 1)
+
         allele_tabs = QTabWidget()
         allele_tabs.addTab(allele_split, "Per sample")
         allele_tabs.addTab(self.shared, "Shared across samples")
@@ -217,6 +273,7 @@ class ResultsView(QWidget):
         self.tabs.addTab(self.efficiency, "Efficiency")
         self.tabs.addTab(self.indel, "Indel & Frame")
         self.tabs.addTab(allele_tabs, "Alleles")
+        self.tabs.addTab(excision_split, "Paired excision")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -224,17 +281,25 @@ class ResultsView(QWidget):
 
         sel = self.allele_summary.view.selectionModel()
         sel.selectionChanged.connect(self._on_allele_summary_selected)
+        ex_sel = self.excision.view.selectionModel()
+        ex_sel.selectionChanged.connect(self._on_excision_selected)
 
     def clear(self) -> None:
         self._batch = None
         self._all_details = []
+        self._all_excision_sizes = []
         self.efficiency.model.set_rows([])
         self.indel.model.set_rows([])
         self.allele_summary.model.set_rows([])
         self.allele_detail_model.set_rows([])
         self.shared.model.set_rows([])
+        self.excision.model.set_rows([])
+        self.excision_size_model.set_rows([])
         self._hist_btn.setEnabled(False)
         self._detail_label.setText("Allele details (select a summary row)")
+        self._excision_size_label.setText(
+            "Confirmed excision sizes (select a summary row)"
+        )
 
     def append_sample(self, sample: SampleResult) -> None:
         self.efficiency.model.append_rows([asdict(r) for r in sample.efficiencies])
@@ -243,6 +308,8 @@ class ResultsView(QWidget):
             [asdict(r) for r in sample.allele_summaries]
         )
         self._all_details.extend(asdict(r) for r in sample.allele_details)
+        self.excision.model.append_rows([asdict(r) for r in sample.excision_summaries])
+        self._all_excision_sizes.extend(asdict(r) for r in sample.excision_sizes)
 
     def set_batch(self, batch: BatchResult) -> None:
         self._batch = batch
@@ -265,6 +332,25 @@ class ResultsView(QWidget):
         ]
         self.allele_detail_model.set_rows(details)
         self._detail_label.setText(f"Allele details — {sample} / {guide}")
+
+    def _on_excision_selected(self) -> None:
+        indexes = self.excision.view.selectionModel().selectedRows()
+        if not indexes:
+            self.excision_size_model.set_rows([])
+            return
+        src = self.excision.proxy.mapToSource(indexes[0])
+        row = self.excision.model.rows()[src.row()]
+        sample = row.get("sample")
+        amplicon = row.get("amplicon")
+        sizes = [
+            d
+            for d in self._all_excision_sizes
+            if d.get("sample") == sample and d.get("amplicon") == amplicon
+        ]
+        self.excision_size_model.set_rows(sizes)
+        self._excision_size_label.setText(
+            f"Confirmed excision sizes — {sample} / {amplicon}"
+        )
 
     def _export_histogram(self) -> None:
         if self._batch is None:

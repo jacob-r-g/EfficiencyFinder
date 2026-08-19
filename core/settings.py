@@ -21,3 +21,6 @@ class PipelineSettings:
     # allele calling
     min_allele_reads: int = 3
     merge_edit_dist: int = 2
+    # paired-guide excision
+    min_excision_bp: int = 30
+    min_excision_fraction: float = 0.4

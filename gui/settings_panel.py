@@ -124,6 +124,24 @@ _FIELDS = [
         10,
         1,
     ),
+    (
+        "min_excision_bp",
+        "Min paired excision (bp)",
+        "Minimum outer-flank dropout (bp) to confirm a paired-guide excision size.",
+        "int",
+        1,
+        2000,
+        5,
+    ),
+    (
+        "min_excision_fraction",
+        "Min excision fraction",
+        "Confirmed paired excision must drop at least this fraction of the expected intervening span.",
+        "float",
+        0.0,
+        1.0,
+        0.05,
+    ),
 ]
 
 
@@ -164,7 +182,7 @@ class SettingsPanel(QWidget):
             w.setToolTip(tip)
             w.setKeyboardTracking(False)
             self._widgets[attr] = w
-            (left if i < 6 else right).addRow(label, w)
+            (left if i < (len(_FIELDS) + 1) // 2 else right).addRow(label, w)
 
         body_layout = QHBoxLayout(self._body)
         body_layout.addLayout(left, 1)
