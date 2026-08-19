@@ -16,7 +16,8 @@ Keep EfficiencyFinder.app in the project folder (next to main.py).\" buttons {\"
   exit 1
 fi
 
-if [[ ! -x "$SETUP" ]]; then
+chmod +x "$SETUP" 2>/dev/null || true
+if [[ ! -f "$SETUP" ]]; then
   osascript -e "display dialog \"Setup script missing:
 
 $SETUP\" buttons {\"OK\"} default button 1 with icon stop with title \"EfficiencyFinder\""
