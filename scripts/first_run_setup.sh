@@ -4,16 +4,12 @@
 
 set -u
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=macos_dialog.sh
+source "$SCRIPT_DIR/macos_dialog.sh"
+
 PROJECT="$1"
 LOG="$PROJECT/setup.log"
-
-alert() {
-  osascript -e "display dialog \"$1\" buttons {\"OK\"} default button 1 with title \"EfficiencyFinder\" with icon note"
-}
-
-alert_error() {
-  osascript -e "display dialog \"$1\" buttons {\"OK\"} default button 1 with title \"EfficiencyFinder\" with icon stop"
-}
 
 find_python() {
   local candidate
@@ -44,9 +40,9 @@ run_setup() {
   fi
 
   py="$(find_python)" || {
-    alert_error "Python 3.10 or newer is required but was not found.
+    macos_alert_error "Python 3.10 or newer is required but was not found.
 
-Install Python from https://www.python.org/downloads/ (check \"Add to PATH\"), then try again."
+Install Python from https://www.python.org/downloads/ (check Add to PATH), then try again."
     return 1
   }
 
@@ -56,12 +52,12 @@ Install Python from https://www.python.org/downloads/ (check \"Add to PATH\"), t
   } >"$LOG"
 
   if ! venv_ready; then
-    alert "First-time setup will download the app libraries (about 2–5 minutes).
+    macos_alert "First-time setup will download the app libraries (about 2-5 minutes).
 
 You need an internet connection. Click OK to continue."
   fi
 
-  osascript -e 'display notification "Downloading libraries… this may take a few minutes." with title "EfficiencyFinder"' >/dev/null 2>&1 || true
+  macos_notify "Downloading libraries... this may take a few minutes." >/dev/null 2>&1 || true
 
   {
     echo "--- creating virtual environment ---"
@@ -74,18 +70,18 @@ You need an internet connection. Click OK to continue."
     "$PROJECT/.venv/bin/python" -c "import PySide6, numpy, matplotlib; print('OK')"
     echo "=== setup complete $(date) ==="
   } >>"$LOG" 2>&1 || {
-    alert_error "Setup failed. Details were saved to:
+    macos_alert_error "Setup failed. Details were saved to:
 
 $LOG
 
 Common fixes:
-• Check your internet connection
-• Install Python 3.10+ from python.org
-• Double-click \"Setup EfficiencyFinder.command\" to try again"
+- Check your internet connection
+- Install Python 3.10+ from python.org
+- Double-click Setup EfficiencyFinder.command to try again"
     return 1
   }
 
-  alert "Setup finished. EfficiencyFinder will open now."
+  macos_alert "Setup finished. EfficiencyFinder will open now."
   return 0
 }
 
