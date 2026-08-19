@@ -1,0 +1,11 @@
+Open this folder, then:
+
+1. Double-click  Setup EfficiencyFinder.command
+2. If macOS asks whether to open it, click Open
+3. Wait until it says setup finished (first time: a few minutes, internet needed)
+4. The app opens by itself after that
+
+If a black Terminal window appears, that is normal — leave it until setup is done.
+
+You only need to do this once. After that, EfficiencyFinder.app should open on its own.
+If the app still does not open, run Setup EfficiencyFinder.command again.

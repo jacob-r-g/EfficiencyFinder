@@ -8,4 +8,7 @@ else
   bash "./scripts/first_run_setup.sh" "$(pwd)" || exit 1
 fi
 
+# Finder often blocks unsigned .app double-clicks; opening from here works,
+# and clearing quarantine helps later double-clicks.
+find "./EfficiencyFinder.app" -exec xattr -c {} \; 2>/dev/null || true
 open "./EfficiencyFinder.app"
