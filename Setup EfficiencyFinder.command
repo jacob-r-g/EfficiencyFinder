@@ -1,16 +1,21 @@
 #!/bin/bash
-# Double-click to install or repair EfficiencyFinder, then open the app.
-cd "$(dirname "$0")"
+# Double-click to set up (first time) and open EfficiencyFinder.
+# Use this every time to launch the app — do not rely on EfficiencyFinder.app alone.
 
+set -u
+
+cd "$(dirname "$0")"
+PROJECT="$(pwd)"
+
+# shellcheck source=scripts/paths.sh
+source "./scripts/paths.sh"
+# shellcheck source=scripts/macos_dialog.sh
 source "./scripts/macos_dialog.sh"
 
-if bash "./scripts/first_run_setup.sh" "$(pwd)" --check-only; then
-  macos_alert "EfficiencyFinder is already set up. Opening the app now." >/dev/null
-else
-  bash "./scripts/first_run_setup.sh" "$(pwd)" || exit 1
+clear_quarantine "$PROJECT"
+
+if ! bash "./scripts/first_run_setup.sh" "$PROJECT" --check-only; then
+  bash "./scripts/first_run_setup.sh" "$PROJECT" || exit 1
 fi
 
-# Finder often blocks unsigned .app double-clicks; opening from here works,
-# and clearing quarantine helps later double-clicks.
-find "./EfficiencyFinder.app" -exec xattr -c {} \; 2>/dev/null || true
-open "./EfficiencyFinder.app"
+EFFICIENCYFINDER_ROOT="$PROJECT" exec bash "./scripts/launch_app.sh"
