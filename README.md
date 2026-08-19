@@ -12,11 +12,11 @@ It reports, per sample:
 
 ## Run
 
-**macOS:** unzip the folder, then double-click **`Setup EfficiencyFinder.command`** (see `START HERE.txt`).
+**macOS:** unzip the folder, put the whole **EfficiencyFinder** folder in Applications, then double-click **`Setup EfficiencyFinder.command`** once (see `START HERE.txt`).
 
-macOS may ask if you are sure — click **Open**. First-time setup downloads libraries (2–5 minutes, internet required). The app opens from the same Terminal window — leave that window open (you can minimize it). **Always use the Setup command to open the app**; do not rely on double-clicking `EfficiencyFinder.app` alone.
+After setup, open **`EfficiencyFinder.app`** (drag it to the Dock if you like). Keep the whole folder together — do not move only the `.app` out of the folder.
 
-Keep the whole folder together (do not move only the `.app` out). Do not send the `.venv` folder (it is large and rebuilt automatically).
+Do not send the `.venv` folder (it is large and rebuilt automatically).
 
 **From a terminal (optional):**
 

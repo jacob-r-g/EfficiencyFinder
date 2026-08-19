@@ -129,7 +129,9 @@ inside EfficiencyFinder, then run Setup again."
   fi
 
   echo "=== setup complete $(date) ===" >>"$LOG"
-  macos_alert "Setup finished. You can close this Terminal window after the app opens."
+  mkdir -p "${HOME}/Library/Application Support/EfficiencyFinder"
+  printf '%s\n' "$PROJECT" >"${HOME}/Library/Application Support/EfficiencyFinder/install_root.txt"
+  macos_alert "Setup finished. Opening EfficiencyFinder now."
   return 0
 }
 

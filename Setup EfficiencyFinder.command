@@ -1,6 +1,5 @@
 #!/bin/bash
-# Double-click to set up (first time) and open EfficiencyFinder.
-# Use this every time to launch the app — do not rely on EfficiencyFinder.app alone.
+# First time: install libraries. After that: open the EfficiencyFinder app.
 
 set -u
 
@@ -13,9 +12,14 @@ source "./scripts/paths.sh"
 source "./scripts/macos_dialog.sh"
 
 clear_quarantine "$PROJECT"
+save_install_root "$PROJECT"
 
-if ! bash "./scripts/first_run_setup.sh" "$PROJECT" --check-only; then
+if ! venv_is_ready "$PROJECT"; then
   bash "./scripts/first_run_setup.sh" "$PROJECT" || exit 1
 fi
 
-EFFICIENCYFINDER_ROOT="$PROJECT" exec bash "./scripts/launch_app.sh"
+save_install_root "$PROJECT"
+clear_quarantine "$PROJECT"
+
+# Open the real .app (Finder shortcut / Dock). Do not start Python from Terminal.
+open "$PROJECT/EfficiencyFinder.app"
