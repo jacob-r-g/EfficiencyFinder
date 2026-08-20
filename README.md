@@ -28,9 +28,28 @@ python3 -m venv .venv
 
 Python 3.10+, with PySide6, numpy, and matplotlib.
 
+## Web app (home server)
+
+The same analysis runs in the browser via a FastAPI backend. FASTQ is uploaded in 8 MB chunks so it can pass Cloudflare's request-size limit.
+
+**Local development** (API on port 8000, Vite on 5173):
+
+```bash
+python3 -m pip install -r web/backend/requirements.txt
+PYTHONPATH=. python3 -m uvicorn web.backend.app:app --reload --port 8000
+```
+
+```bash
+cd web/frontend
+npm install
+npm run dev
+```
+
+**Deploy to Unraid** (port 4322, same pattern as the g-force webapp): copy `deploy.config.example` to `.deploy.config`, then `./deploy.sh`. Add a Cloudflare Tunnel public hostname pointing at `http://localhost:4322`.
+
 ## Inputs
 
-**FASTQ:** standard 4-line files. Quality scores are ignored. Select many files at once for a batch.
+**FASTQ:** standard 4-line files, optionally gzip-compressed (`.fastq.gz` / `.fq.gz`). Quality scores are ignored. Select many files at once for a batch.
 
 **FASTA:** one combined amplicon + guide file.
 
