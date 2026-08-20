@@ -1,0 +1,52 @@
+"""HTTP endpoints for starting a job and polling results."""
+
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, Field
+
+from web.backend.jobs import JobManager, public_status
+from web.backend.settings_body import SettingsError
+from web.backend.store import StoreError
+
+router = APIRouter()
+
+
+class JobCreate(BaseModel):
+    upload_id: str
+    fasta: str
+    fastqs: list[str] = Field(min_length=1)
+    settings: dict[str, int | float] = Field(default_factory=dict)
+
+
+def _jobs(request: Request) -> JobManager:
+    return request.app.state.jobs
+
+
+@router.post("/api/jobs")
+def create_job(body: JobCreate, request: Request):
+    try:
+        state = _jobs(request).submit(
+            body.upload_id, body.fasta, body.fastqs, body.settings
+        )
+    except (StoreError, SettingsError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return public_status(state)
+
+
+@router.get("/api/jobs/{job_id}")
+def get_job(job_id: str, request: Request):
+    try:
+        state = _jobs(request).get(job_id)
+    except StoreError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return public_status(state)
+
+
+@router.get("/api/jobs/{job_id}/results")
+def get_results(job_id: str, request: Request):
+    try:
+        state = _jobs(request).get(job_id)
+    except StoreError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if state.status != "done":
+        raise HTTPException(status_code=409, detail="results not ready")
+    return state.results
