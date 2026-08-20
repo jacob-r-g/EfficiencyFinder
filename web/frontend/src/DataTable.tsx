@@ -10,7 +10,7 @@ type Props = {
 function csvCell(value: unknown): string {
   if (value === null || value === undefined) return "";
   const text = String(value);
-  if (/[",\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
+  if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
   return text;
 }
 
