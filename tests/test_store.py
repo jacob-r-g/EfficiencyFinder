@@ -20,7 +20,9 @@ class TestStore(unittest.TestCase):
         with self.assertRaises(StoreError):
             self.store.write_chunk(uid, "../etc/passwd", 0, 1, b"x")
         with self.assertRaises(StoreError):
-            self.store.write_chunk(uid, "bad name.fq", 0, 1, b"x")
+            self.store.write_chunk(uid, "bad:name.fq", 0, 1, b"x")
+        assembled = self.store.write_chunk(uid, "plant A.fastq.gz", 0, 1, b"x")
+        self.assertTrue(assembled)
 
     def test_assembles_chunks_in_order(self):
         uid = self.store.new_upload_id()
