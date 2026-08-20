@@ -197,8 +197,8 @@ tbody tr.selected {
   padding: 12px 14px;
 }
 
-.status {
-  font-size: 0.9rem;
-  color: #444;
-  margin: 8px 0;
+.histogram {
+  max-width: 720px;
+  margin: 0 auto 12px;
+  height: 220px;
 }
