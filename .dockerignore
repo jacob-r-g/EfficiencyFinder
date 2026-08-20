@@ -1,0 +1,10 @@
+.venv/
+.git/
+__pycache__/
+*.py[cod]
+web/frontend/node_modules/
+web/frontend/dist/
+EfficiencyFinder.app/
+.deploy.config
+*.tar
+.DS_Store

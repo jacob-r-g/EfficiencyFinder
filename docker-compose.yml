@@ -1,0 +1,15 @@
+services:
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: efficiencyfinder-webapp:latest
+    container_name: efficiencyfinder-webapp
+    ports:
+      - "4322:4322"
+    volumes:
+      - efficiencyfinder-data:/data
+    restart: unless-stopped
+
+volumes:
+  efficiencyfinder-data:
