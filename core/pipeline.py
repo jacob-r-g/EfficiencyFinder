@@ -3,14 +3,13 @@
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from math import nan
-from pathlib import Path
 
 from .alleles import call_alleles_for_sample
 from .classify import classify_reads
 from .editing import GuideEfficiency, call_editing_status, summarize_efficiency
 from .excision import ExcisionSizeRow, ExcisionSummary, call_paired_excisions
 from .indel_frame import classify_frame, extract_allele
-from .parsing import ReferenceSet, parse_fastq
+from .parsing import ReferenceSet, parse_fastq, sample_name_from_path
 from .settings import PipelineSettings
 
 
@@ -216,7 +215,7 @@ def run_single_sample(
 ) -> SampleResult:
     """Run parsing → classify → editing → indel/frame → alleles for one FASTQ."""
     settings = settings or PipelineSettings()
-    name = sample_name if sample_name is not None else Path(fastq_path).stem
+    name = sample_name if sample_name is not None else sample_name_from_path(fastq_path)
     reads = parse_fastq(fastq_path)
     classified = classify_reads(
         reads,
@@ -305,7 +304,7 @@ def run_batch(
     n = len(fastq_paths)
     samples: list[SampleResult] = []
     for i, path in enumerate(fastq_paths):
-        name = Path(path).stem
+        name = sample_name_from_path(path)
         if progress_callback is not None:
             progress_callback(i + 1, n, name)
         result = run_single_sample(path, ref_set, settings, sample_name=name)

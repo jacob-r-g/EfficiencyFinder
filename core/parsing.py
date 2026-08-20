@@ -2,6 +2,7 @@
 
 import gzip
 from dataclasses import dataclass
+from pathlib import Path
 
 
 class FastaValidationError(ValueError):
@@ -39,6 +40,27 @@ def _open_text(path: str):
     if path.endswith(".gz"):
         return gzip.open(path, "rt")
     return open(path)
+
+
+def sample_name_from_path(path: str) -> str:
+    """Basename without FASTA/FASTQ (and optional `.gz`) suffixes."""
+    name = Path(path).name
+    lower = name.lower()
+    for suffix in (
+        ".fastq.gz",
+        ".fq.gz",
+        ".fasta.gz",
+        ".fa.gz",
+        ".fastq",
+        ".fq",
+        ".fasta",
+        ".fa",
+        ".fna",
+        ".fas",
+    ):
+        if lower.endswith(suffix):
+            return name[: -len(suffix)]
+    return Path(path).stem
 
 
 def parse_fastq(path: str) -> list[tuple[str, str]]:

@@ -9,6 +9,7 @@ from core.parsing import (
     parse_fasta,
     parse_fastq,
     revcomp,
+    sample_name_from_path,
 )
 from tests.helpers import (
     AMP1,
@@ -56,6 +57,11 @@ class TestParseFastaFastq(unittest.TestCase):
             gz.write_bytes(gzip.compress(raw.read_bytes()))
             reads = parse_fastq(str(gz))
             self.assertEqual(reads, [("r1", "ACGTACGT")])
+
+    def test_sample_name_strips_fastq_gz(self):
+        self.assertEqual(sample_name_from_path("plantA.fastq.gz"), "plantA")
+        self.assertEqual(sample_name_from_path("/tmp/plantA.fq"), "plantA")
+        self.assertEqual(sample_name_from_path("ref.fa"), "ref")
 
     def test_empty_fasta_raises(self):
         with tempfile.TemporaryDirectory() as td:
