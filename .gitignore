@@ -8,3 +8,7 @@ build/
 .pytest_cache/
 setup.log
 launch.log
+.deploy.config
+web/frontend/node_modules/
+web/frontend/dist/
+*-webapp-latest.tar
