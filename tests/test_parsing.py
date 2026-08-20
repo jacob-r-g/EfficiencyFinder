@@ -1,3 +1,4 @@
+import gzip
 import tempfile
 import unittest
 from pathlib import Path
@@ -45,6 +46,15 @@ class TestParseFastaFastq(unittest.TestCase):
             self.assertEqual(entries["Y"], "TTTT")
             fq = write_fastq(td / "a.fq", [("r1", "acgtacgt")])
             reads = parse_fastq(str(fq))
+            self.assertEqual(reads, [("r1", "ACGTACGT")])
+
+    def test_parse_gzipped_fastq(self):
+        with tempfile.TemporaryDirectory() as td:
+            raw = Path(td) / "a.fastq"
+            write_fastq(raw, [("r1", "acgtacgt")])
+            gz = Path(td) / "a.fastq.gz"
+            gz.write_bytes(gzip.compress(raw.read_bytes()))
+            reads = parse_fastq(str(gz))
             self.assertEqual(reads, [("r1", "ACGTACGT")])
 
     def test_empty_fasta_raises(self):
