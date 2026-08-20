@@ -40,7 +40,7 @@ class TestUploadApi(unittest.TestCase):
     def test_rejects_bad_filename(self):
         uid = self.client.post("/api/uploads").json()["upload_id"]
         res = self.client.put(
-            f"/api/uploads/{uid}/files/not%20ok.fq?chunk=0&chunks=1",
+            f"/api/uploads/{uid}/files/not%3Aok.fq?chunk=0&chunks=1",
             content=b"x",
         )
         self.assertEqual(res.status_code, 400)
