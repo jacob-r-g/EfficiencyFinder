@@ -1,5 +1,6 @@
 """FASTA / FASTQ parsing and amplicon+guide FASTA validation."""
 
+import gzip
 from dataclasses import dataclass
 
 
@@ -33,10 +34,17 @@ def parse_fasta(path: str) -> dict[str, str]:
     return entries
 
 
+def _open_text(path: str):
+    """Open a text file, transparently decompressing `.gz`."""
+    if path.endswith(".gz"):
+        return gzip.open(path, "rt")
+    return open(path)
+
+
 def parse_fastq(path: str) -> list[tuple[str, str]]:
     """Parse a FASTQ file into a list of (read_id, sequence). Quality lines discarded."""
     reads = []
-    with open(path) as f:
+    with _open_text(path) as f:
         while True:
             h = f.readline()
             if not h:
