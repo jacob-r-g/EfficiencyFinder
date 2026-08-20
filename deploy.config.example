@@ -1,0 +1,5 @@
+UNRAID_HOST="192.168.1.100"
+UNRAID_USER="root"
+UNRAID_DEPLOY_PATH="/mnt/user/appdata/efficiencyfinder-webapp"
+# Optional. Leave empty to use the default SSH key / agent.
+SSH_KEY_PATH=""
