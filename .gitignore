@@ -12,3 +12,4 @@ launch.log
 web/frontend/node_modules/
 web/frontend/dist/
 *-webapp-latest.tar
+sample files/
