@@ -7,8 +7,10 @@ type Props = {
   fasta: File | null;
   fastqs: File[];
   running: boolean;
+  combineFastqs: boolean;
   onFasta: (file: File | null) => void;
   onFastqs: (files: File[]) => void;
+  onCombineFastqs: (value: boolean) => void;
   onRun: () => void;
 };
 
@@ -22,8 +24,10 @@ export default function FilePanel({
   fasta,
   fastqs,
   running,
+  combineFastqs,
   onFasta,
   onFastqs,
+  onCombineFastqs,
   onRun,
 }: Props) {
   const fastaRef = useRef<HTMLInputElement>(null);
@@ -119,6 +123,15 @@ export default function FilePanel({
           {running ? "Running…" : "Run analysis"}
         </button>
       </div>
+      <label className="checkbox-row" title="Treat all uploaded FASTQ files as one sample (useful when one experiment was split across reactions).">
+        <input
+          type="checkbox"
+          checked={combineFastqs}
+          disabled={running || fastqs.length < 2}
+          onChange={(e) => onCombineFastqs(e.target.checked)}
+        />
+        Combine FASTQs into one sample
+      </label>
     </section>
   );
 }

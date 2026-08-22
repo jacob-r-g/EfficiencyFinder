@@ -197,6 +197,23 @@ tbody tr.selected {
   padding: 12px 14px;
 }
 
+.results-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
 .status {
   font-size: 0.9rem;
   color: #444;

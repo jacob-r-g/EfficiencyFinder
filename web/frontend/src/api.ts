@@ -36,6 +36,7 @@ export async function startJob(
   fasta: string,
   fastqs: string[],
   settings: PipelineSettings,
+  combineFastqs = false,
 ): Promise<JobStatus> {
   const res = await check(
     await fetch("/api/jobs", {
@@ -46,6 +47,7 @@ export async function startJob(
         fasta,
         fastqs,
         settings,
+        combine_fastqs: combineFastqs,
       }),
     }),
   );
