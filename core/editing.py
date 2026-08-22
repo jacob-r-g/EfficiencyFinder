@@ -12,6 +12,7 @@ MISMATCH_THRESH_FLANK = 4
 MISMATCH_THRESH_TARGET = 4
 K_SPAN = 15
 COVERAGE_MARGIN = 40
+MIN_GUIDE_COVERAGE_KMERS = 2
 
 STATUS_NOT_SEQUENCED = "not_sequenced"
 STATUS_WT = "WT_intact"
@@ -30,15 +31,11 @@ class ReadGuideCall:
     status: str
 
 
-def _amplicon_outer_brackets(amplicons, guides_by_amplicon, guides, coverage_margin: int):
-    brackets = {}
-    for amp, gnames in guides_by_amplicon.items():
-        if not gnames:
-            continue
-        starts = [guides[g].target_start - len(guides[g].left_flank) for g in gnames]
-        ends = [guides[g].target_end + len(guides[g].right_flank) for g in gnames]
-        brackets[amp] = (min(starts) - coverage_margin, max(ends) + coverage_margin)
-    return brackets
+def _guide_window(gi, amp_len: int, coverage_margin: int) -> tuple[int, int]:
+    """[start, end) window around one guide's flanks + margin."""
+    start = max(0, gi.target_start - len(gi.left_flank) - coverage_margin)
+    end = min(amp_len, gi.target_end + len(gi.right_flank) + coverage_margin)
+    return start, end
 
 
 def call_editing_status(
@@ -48,10 +45,14 @@ def call_editing_status(
     guides_by_amplicon,
     settings: PipelineSettings | None = None,
 ) -> list[ReadGuideCall]:
+    """Call WT/edited per guide.
+
+    Coverage is per-guide: a read only needs to overlap that guide's local
+    window. Missing flanks still produce an edit call (typically large
+    deletion), so paired-guide dropouts between cuts are not discarded as
+    not_sequenced. A guide the read never reaches stays not_sequenced.
+    """
     s = settings or PipelineSettings()
-    outer_brackets = _amplicon_outer_brackets(
-        amplicons, guides_by_amplicon, guides, s.coverage_margin
-    )
     region_kmer_cache = {}
 
     def region_kmers(amp, start, end):
@@ -72,13 +73,15 @@ def call_editing_status(
 
         read_seq = cr.oriented_seq
         read_kmers = kmer_set(read_seq, k=s.k_span)
-        ob_start, ob_end = outer_brackets[cr.amplicon]
-        covered = (
-            len(read_kmers & region_kmers(cr.amplicon, ob_start, ob_start + s.coverage_margin)) >= 2
-            and len(read_kmers & region_kmers(cr.amplicon, ob_end - s.coverage_margin, ob_end)) >= 2
-        )
+        amp_len = len(amplicons[cr.amplicon])
 
         for gname in gnames:
+            gi = guides[gname]
+            w_start, w_end = _guide_window(gi, amp_len, s.coverage_margin)
+            covered = (
+                len(read_kmers & region_kmers(cr.amplicon, w_start, w_end))
+                >= MIN_GUIDE_COVERAGE_KMERS
+            )
             if not covered:
                 calls.append(
                     ReadGuideCall(
@@ -87,7 +90,6 @@ def call_editing_status(
                 )
                 continue
 
-            gi = guides[gname]
             lf, rf, tgt = gi.left_flank, gi.right_flank, gi.target
             lpos, lmm = find_best_match(lf, read_seq)
             rpos, rmm = find_best_match(rf, read_seq)
