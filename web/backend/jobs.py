@@ -9,6 +9,7 @@ from typing import Any, Callable
 
 from core.parsing import FastaValidationError, load_reference_set
 from core.pipeline import run_batch
+from web.backend.combine import combine_fastq_files
 from web.backend.serialize import jsonable
 from web.backend.settings_body import settings_from_dict
 from web.backend.store import Store, StoreError, safe_filename
@@ -28,6 +29,7 @@ class JobState:
     fasta_path: Path | None = field(default=None, repr=False)
     fastq_paths: list[Path] = field(default_factory=list, repr=False)
     settings: Any = field(default=None, repr=False)
+    combine_fastqs: bool = False
 
 
 def public_status(state: JobState) -> dict:
@@ -79,6 +81,7 @@ class JobManager:
         fasta: str,
         fastqs: list[str],
         settings: dict | None,
+        combine_fastqs: bool = False,
     ) -> JobState:
         fasta_name = safe_filename(fasta)
         fastq_names = [safe_filename(n) for n in fastqs]
@@ -101,6 +104,7 @@ class JobManager:
             fasta_path=fasta_path,
             fastq_paths=fastq_paths,
             settings=settings_obj,
+            combine_fastqs=combine_fastqs,
         )
         with self._cv:
             self._jobs[job_id] = state
@@ -126,12 +130,18 @@ class JobManager:
                 fasta = state.fasta_path
                 fastqs = list(state.fastq_paths)
                 settings = state.settings
+                do_combine = state.combine_fastqs
 
             def on_progress(i: int, n: int, sample: str, _state=state) -> None:
                 with self._lock:
                     _state.progress = {"i": i, "n": n, "sample": sample}
 
             try:
+                if do_combine and len(fastqs) > 1:
+                    on_progress(0, 1, "combining FASTQs")
+                    combined = fasta.parent / "combined.fastq"
+                    combine_fastq_files(fastqs, combined)
+                    fastqs = [combined]
                 results = self.analyze(fasta, fastqs, settings, on_progress)
                 with self._lock:
                     state.results = results
