@@ -31,17 +31,36 @@ const EXCISION_SIZE = ["sample", "amplicon", "excision_size_bp", "n_reads", "pct
 
 const TABS = ["Efficiency", "Indel & Frame", "Alleles", "Paired excision"] as const;
 
+function hasReads(row: Record<string, unknown>, key: string): boolean {
+  const n = row[key];
+  return typeof n === "number" ? n > 0 : Number(n) > 0;
+}
+
 type Props = { result: BatchResult | null };
 
 export default function ResultsView({ result }: Props) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Efficiency");
   const [alleleTab, setAlleleTab] = useState<"sample" | "shared">("sample");
+  const [hideZeros, setHideZeros] = useState(true);
   const [detailFilter, setDetailFilter] = useState<Record<string, unknown> | null>(null);
   const [excisionFilter, setExcisionFilter] = useState<Record<string, unknown> | null>(null);
 
   if (!result) {
     return <section className="results">Run an analysis to see results.</section>;
   }
+
+  const efficiencies = hideZeros
+    ? result.efficiencies.filter((r) => hasReads(r, "total_amplicon_reads"))
+    : result.efficiencies;
+  const indelRows = hideZeros
+    ? result.indel_summaries.filter((r) => hasReads(r, "n_reads_with_size_call"))
+    : result.indel_summaries;
+  const alleleSummaries = hideZeros
+    ? result.allele_summaries.filter((r) => hasReads(r, "total_reads"))
+    : result.allele_summaries;
+  const excisionRows = hideZeros
+    ? result.excision_summaries.filter((r) => hasReads(r, "n_spanning_reads"))
+    : result.excision_summaries;
 
   const details = result.allele_details.filter(
     (d) =>
@@ -56,25 +75,35 @@ export default function ResultsView({ result }: Props) {
 
   return (
     <section className="results">
-      <div className="tabs">
-        {TABS.map((name) => (
-          <button
-            key={name}
-            type="button"
-            className={tab === name ? "active" : ""}
-            onClick={() => setTab(name)}
-          >
-            {name}
-          </button>
-        ))}
+      <div className="results-toolbar">
+        <div className="tabs">
+          {TABS.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={tab === name ? "active" : ""}
+              onClick={() => setTab(name)}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+        <label className="checkbox-row" title="Hide amplicons/guides with zero reads in this sample (e.g. other PCR reactions).">
+          <input
+            type="checkbox"
+            checked={hideZeros}
+            onChange={(e) => setHideZeros(e.target.checked)}
+          />
+          Hide zero-read rows
+        </label>
       </div>
       {tab === "Efficiency" && (
-        <DataTable columns={EFFICIENCY} rows={result.efficiencies} filename="efficiency.csv" />
+        <DataTable columns={EFFICIENCY} rows={efficiencies} filename="efficiency.csv" />
       )}
       {tab === "Indel & Frame" && (
         <>
           <IndelHistogram sizes={result.indel_sizes} />
-          <DataTable columns={INDEL} rows={result.indel_summaries} filename="indel_frame.csv" />
+          <DataTable columns={INDEL} rows={indelRows} filename="indel_frame.csv" />
         </>
       )}
       {tab === "Alleles" && (
@@ -93,7 +122,7 @@ export default function ResultsView({ result }: Props) {
             <>
               <DataTable
                 columns={ALLELE_SUMMARY}
-                rows={result.allele_summaries}
+                rows={alleleSummaries}
                 filename="alleles_summary.csv"
                 onSelect={setDetailFilter}
               />
@@ -111,7 +140,7 @@ export default function ResultsView({ result }: Props) {
         <>
           <DataTable
             columns={EXCISION}
-            rows={result.excision_summaries}
+            rows={excisionRows}
             filename="paired_excision.csv"
             onSelect={setExcisionFilter}
           />

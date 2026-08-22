@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS, type BatchResult, type PipelineSettings } from "./typ
 export default function App() {
   const [fasta, setFasta] = useState<File | null>(null);
   const [fastqs, setFastqs] = useState<File[]>([]);
+  const [combineFastqs, setCombineFastqs] = useState(false);
   const [settings, setSettings] = useState<PipelineSettings>(DEFAULT_SETTINGS);
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState(
@@ -29,19 +30,23 @@ export default function App() {
         setStatus(`Uploading ${file.name}…`);
         await uploadFile(uploadId, file);
       }
-      setStatus("Queued…");
+      setStatus(combineFastqs ? "Combining FASTQs…" : "Queued…");
       const job = await startJob(
         uploadId,
         fasta.name,
         fastqs.map((f) => f.name),
         settings,
+        combineFastqs && fastqs.length > 1,
       );
       const done = await pollJob(job.id, (s) => {
         if (s.status === "queued") setStatus("Queued…");
         else if (s.progress) {
-          setStatus(
-            `Processing sample ${s.progress.i} of ${s.progress.n}: ${s.progress.sample}`,
-          );
+          if (s.progress.i === 0) setStatus("Combining FASTQs…");
+          else {
+            setStatus(
+              `Processing sample ${s.progress.i} of ${s.progress.n}: ${s.progress.sample}`,
+            );
+          }
         } else if (s.status === "running") setStatus("Running…");
       });
       if (done.status === "failed") {
@@ -69,8 +74,10 @@ export default function App() {
         fasta={fasta}
         fastqs={fastqs}
         running={running}
+        combineFastqs={combineFastqs}
         onFasta={setFasta}
         onFastqs={setFastqs}
+        onCombineFastqs={setCombineFastqs}
         onRun={run}
       />
       <SettingsPanel value={settings} disabled={running} onChange={setSettings} />
