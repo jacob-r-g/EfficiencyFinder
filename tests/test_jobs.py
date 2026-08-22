@@ -80,3 +80,25 @@ class TestJobManager(unittest.TestCase):
         uid = self._seed_upload()
         with self.assertRaises(StoreError):
             manager.submit(uid, "nope.fa", ["s.fq"], {})
+
+    def test_combine_fastqs_passes_single_file(self):
+        seen = {}
+
+        def analyze(fasta, fastqs, settings, on_progress):
+            seen["names"] = [p.name for p in fastqs]
+            seen["n_reads"] = sum(
+                1 for p in fastqs for line in p.read_text().splitlines() if line.startswith("@")
+            )
+            return {"ok": True}
+
+        manager = JobManager(self.store, analyze=analyze)
+        uid = self.store.new_upload_id()
+        self.store.write_chunk(uid, "ref.fa", 0, 1, b">Amp1\nACGT\n")
+        self.store.write_chunk(uid, "a.fq", 0, 1, b"@r1\nAAAA\n+\nIIII\n")
+        self.store.write_chunk(uid, "b.fq", 0, 1, b"@r2\nCCCC\n+\nIIII\n")
+        state = manager.submit(
+            uid, "ref.fa", ["a.fq", "b.fq"], {}, combine_fastqs=True
+        )
+        _wait(manager, state.id, "done")
+        self.assertEqual(seen["names"], ["combined.fastq"])
+        self.assertEqual(seen["n_reads"], 2)

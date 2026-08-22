@@ -15,6 +15,7 @@ class JobCreate(BaseModel):
     fasta: str
     fastqs: list[str] = Field(min_length=1)
     settings: dict[str, int | float] = Field(default_factory=dict)
+    combine_fastqs: bool = False
 
 
 def _jobs(request: Request) -> JobManager:
@@ -25,7 +26,11 @@ def _jobs(request: Request) -> JobManager:
 def create_job(body: JobCreate, request: Request):
     try:
         state = _jobs(request).submit(
-            body.upload_id, body.fasta, body.fastqs, body.settings
+            body.upload_id,
+            body.fasta,
+            body.fastqs,
+            body.settings,
+            combine_fastqs=body.combine_fastqs,
         )
     except (StoreError, SettingsError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
