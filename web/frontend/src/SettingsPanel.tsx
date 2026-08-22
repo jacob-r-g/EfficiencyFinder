@@ -18,7 +18,7 @@ const FIELDS: Field[] = [
   { key: "mismatch_thresh_flank", label: "Flank mismatch max", title: "Max mismatches allowed when matching a flank sequence.", kind: "int", min: 0, max: 20, step: 1 },
   { key: "mismatch_thresh_target", label: "Target mismatch max", title: "Max mismatches allowed in the target sequence for a WT call.", kind: "int", min: 0, max: 20, step: 1 },
   { key: "k_span", label: "Coverage k-mer", title: "k-mer length for presence-based coverage checks around the guide bracket.", kind: "int", min: 5, max: 51, step: 1 },
-  { key: "coverage_margin", label: "Coverage margin (bp)", title: "Extra bp beyond the flanks of all guides for the outer coverage bracket.", kind: "int", min: 0, max: 200, step: 1 },
+  { key: "coverage_margin", label: "Coverage margin (bp)", title: "Extra bp beyond each guide's flanks defining that guide's coverage window.", kind: "int", min: 0, max: 200, step: 1 },
   { key: "mismatch_fraction", label: "Anchor mismatch fraction", title: "Max fraction of indel-sizing anchor length allowed to mismatch.", kind: "float", min: 0, max: 1, step: 0.01 },
   { key: "max_extra", label: "Max anchor extra (bp)", title: "Cap on how far the indel-sizing anchor search will extend.", kind: "int", min: 25, max: 2000, step: 25 },
   { key: "artifact_size_threshold", label: "Artifact size threshold (bp)", title: "Net indel sizes beyond this are treated as nanopore concatemer artifacts, not real edits.", kind: "int", min: 10, max: 5000, step: 10 },
