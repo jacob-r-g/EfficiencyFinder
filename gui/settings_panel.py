@@ -73,7 +73,7 @@ _FIELDS = [
     (
         "coverage_margin",
         "Coverage margin (bp)",
-        "Extra bp beyond the flanks of all guides for the outer coverage bracket.",
+        "Extra bp beyond each guide's flanks defining that guide's coverage window.",
         "int",
         0,
         200,

@@ -22,7 +22,34 @@ body {
 h1 {
   font-size: 1.35rem;
   font-weight: 650;
-  margin: 0 0 8px;
+  margin: 0;
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.app-nav {
+  display: flex;
+  gap: 6px;
+}
+
+.app-nav button {
+  border: 1px solid #ddd;
+  background: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.app-nav button.active {
+  font-weight: 600;
+  border-color: #1f6feb;
+  color: #1f6feb;
 }
 
 button {
@@ -232,4 +259,64 @@ tbody tr.selected {
   padding: 10px;
   white-space: pre-wrap;
   font-size: 0.85rem;
+}
+
+.docs h2 {
+  font-size: 1.1rem;
+  margin: 1.4rem 0 0.5rem;
+}
+
+.docs h2:first-child {
+  margin-top: 0;
+}
+
+.docs h3 {
+  font-size: 0.95rem;
+  margin: 0.9rem 0 0.35rem;
+}
+
+.docs p,
+.docs li {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #222;
+}
+
+.docs ul {
+  margin: 0.35rem 0 0.6rem;
+  padding-left: 1.25rem;
+}
+
+.docs dl {
+  margin: 0.4rem 0 0.8rem;
+}
+
+.docs-term {
+  display: grid;
+  grid-template-columns: minmax(10rem, 15rem) 1fr;
+  gap: 6px 14px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.88rem;
+}
+
+.docs-term dt {
+  margin: 0;
+  font-weight: 600;
+}
+
+.docs-term dt code {
+  font-size: 0.84rem;
+  word-break: break-word;
+}
+
+.docs-term dd {
+  margin: 0;
+  color: #333;
+}
+
+@media (max-width: 720px) {
+  .docs-term {
+    grid-template-columns: 1fr;
+  }
 }

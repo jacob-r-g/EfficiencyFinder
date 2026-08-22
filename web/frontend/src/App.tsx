@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { createUpload, getResults, pollJob, startJob, uploadFile } from "./api";
+import DocsPanel from "./DocsPanel";
 import FilePanel from "./FilePanel";
 import ResultsView from "./ResultsView";
 import SettingsPanel from "./SettingsPanel";
 import { DEFAULT_SETTINGS, type BatchResult, type PipelineSettings } from "./types";
 
 export default function App() {
+  const [view, setView] = useState<"analyze" | "docs">("analyze");
   const [fasta, setFasta] = useState<File | null>(null);
   const [fastqs, setFastqs] = useState<File[]>([]);
   const [combineFastqs, setCombineFastqs] = useState(false);
@@ -69,22 +71,46 @@ export default function App() {
 
   return (
     <>
-      <h1>CRISPR Amplicon Editing Efficiency</h1>
-      <FilePanel
-        fasta={fasta}
-        fastqs={fastqs}
-        running={running}
-        combineFastqs={combineFastqs}
-        onFasta={setFasta}
-        onFastqs={setFastqs}
-        onCombineFastqs={setCombineFastqs}
-        onRun={run}
-      />
-      <SettingsPanel value={settings} disabled={running} onChange={setSettings} />
-      {running && <progress className="run-progress" />}
-      <p className="status">{status}</p>
-      {error && <pre className="error">{error}</pre>}
-      <ResultsView result={result} />
+      <header className="app-header">
+        <h1>CRISPR Amplicon Editing Efficiency</h1>
+        <nav className="app-nav">
+          <button
+            type="button"
+            className={view === "analyze" ? "active" : ""}
+            onClick={() => setView("analyze")}
+          >
+            Analysis
+          </button>
+          <button
+            type="button"
+            className={view === "docs" ? "active" : ""}
+            onClick={() => setView("docs")}
+          >
+            How it works
+          </button>
+        </nav>
+      </header>
+      {view === "docs" ? (
+        <DocsPanel />
+      ) : (
+        <>
+          <FilePanel
+            fasta={fasta}
+            fastqs={fastqs}
+            running={running}
+            combineFastqs={combineFastqs}
+            onFasta={setFasta}
+            onFastqs={setFastqs}
+            onCombineFastqs={setCombineFastqs}
+            onRun={run}
+          />
+          <SettingsPanel value={settings} disabled={running} onChange={setSettings} />
+          {running && <progress className="run-progress" />}
+          <p className="status">{status}</p>
+          {error && <pre className="error">{error}</pre>}
+          <ResultsView result={result} />
+        </>
+      )}
     </>
   );
 }
