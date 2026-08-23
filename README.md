@@ -45,7 +45,14 @@ npm install
 npm run dev
 ```
 
-**Deploy to Unraid** (port 4322, same pattern as the g-force webapp): copy `deploy.config.example` to `.deploy.config`, then `./deploy.sh`. Add a Cloudflare Tunnel public hostname pointing at `http://localhost:4322`.
+**Deploy to Unraid** (port 4322):
+
+```bash
+cp deploy.config.example .deploy.config   # once; set host / path
+./deploy.sh                               # enter Unraid SSH password when prompted
+```
+
+Bump the repo-root `VERSION` file before a deploy so you can confirm the live site (header `v…` or `/health`). Use `./deploy.sh --skip-build` to reuse an image you already built locally. Cloudflare Tunnel should point a public hostname at `http://localhost:4322` on the Unraid host.
 
 ## Inputs
 
