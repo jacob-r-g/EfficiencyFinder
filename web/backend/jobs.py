@@ -14,7 +14,7 @@ from web.backend.serialize import jsonable
 from web.backend.settings_body import settings_from_dict
 from web.backend.store import Store, StoreError, safe_filename
 
-ProgressFn = Callable[[int, int, str], None]
+ProgressFn = Callable[..., None]
 AnalyzeFn = Callable[[Path, list[Path], Any, ProgressFn], dict]
 
 
@@ -45,6 +45,8 @@ def public_status(state: JobState) -> dict:
 def default_analyze(
     fasta: Path, fastqs: list[Path], settings, on_progress: ProgressFn
 ) -> dict:
+    n = max(len(fastqs), 1)
+    on_progress(0, n, "", stage="Loading reference", stage_i=0, stage_n=1)
     ref = load_reference_set(str(fasta), flank=settings.flank)
     batch = run_batch(
         [str(p) for p in fastqs],
@@ -132,13 +134,29 @@ class JobManager:
                 settings = state.settings
                 do_combine = state.combine_fastqs
 
-            def on_progress(i: int, n: int, sample: str, _state=state) -> None:
+            def on_progress(
+                i: int,
+                n: int,
+                sample: str,
+                *,
+                stage: str = "",
+                stage_i: int = 0,
+                stage_n: int = 0,
+                _state=state,
+            ) -> None:
                 with self._lock:
-                    _state.progress = {"i": i, "n": n, "sample": sample}
+                    _state.progress = {
+                        "i": i,
+                        "n": n,
+                        "sample": sample,
+                        "stage": stage,
+                        "stage_i": stage_i,
+                        "stage_n": stage_n,
+                    }
 
             try:
                 if do_combine and len(fastqs) > 1:
-                    on_progress(0, 1, "combining FASTQs")
+                    on_progress(0, 1, "", stage="Combining FASTQs", stage_i=0, stage_n=1)
                     combined = fasta.parent / "combined.fastq"
                     combine_fastq_files(fastqs, combined)
                     fastqs = [combined]

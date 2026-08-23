@@ -17,6 +17,38 @@ def _pct(numer: int, denom: int) -> float:
     return round(100.0 * numer / denom, 1) if denom else nan
 
 
+# Ordered stages inside one sample; used for determinate progress bars.
+SAMPLE_STAGES = (
+    "Reading FASTQ",
+    "Classifying reads",
+    "Calling editing",
+    "Measuring indels & alleles",
+    "Calling paired excision",
+)
+
+
+def _emit_progress(
+    callback,
+    sample_i: int,
+    sample_n: int,
+    sample: str,
+    *,
+    stage: str,
+    stage_i: int,
+    stage_n: int,
+) -> None:
+    if callback is None:
+        return
+    callback(
+        sample_i,
+        sample_n,
+        sample,
+        stage=stage,
+        stage_i=stage_i,
+        stage_n=stage_n,
+    )
+
+
 @dataclass
 class IndelSummary:
     sample: str
@@ -232,11 +264,33 @@ def run_single_sample(
     ref_set: ReferenceSet,
     settings: PipelineSettings | None = None,
     sample_name: str | None = None,
+    progress_callback=None,
+    sample_i: int = 1,
+    sample_n: int = 1,
 ) -> SampleResult:
-    """Run parsing → classify → editing → indel/frame → alleles for one FASTQ."""
+    """Run parsing → classify → editing → indel/frame → alleles for one FASTQ.
+
+    `progress_callback(i, n, sample_name, *, stage, stage_i, stage_n)` is invoked
+    at the start of each pipeline stage (i is 1-based sample index).
+    """
     settings = settings or PipelineSettings()
     name = sample_name if sample_name is not None else sample_name_from_path(fastq_path)
+    stage_n = len(SAMPLE_STAGES)
+
+    def stage(stage_i: int) -> None:
+        _emit_progress(
+            progress_callback,
+            sample_i,
+            sample_n,
+            name,
+            stage=SAMPLE_STAGES[stage_i - 1],
+            stage_i=stage_i,
+            stage_n=stage_n,
+        )
+
+    stage(1)
     reads = parse_fastq(fastq_path)
+    stage(2)
     classified = classify_reads(
         reads,
         ref_set.amplicons,
@@ -247,6 +301,7 @@ def run_single_sample(
     n_assigned = sum(amp_read_counts.values())
     n_unassigned = sum(1 for cr in classified if cr.amplicon is None)
 
+    stage(3)
     calls = call_editing_status(
         classified,
         ref_set.amplicons,
@@ -257,9 +312,11 @@ def run_single_sample(
     efficiencies = summarize_efficiency(
         calls, ref_set.guides, amp_read_counts, sample=name
     )
+    stage(4)
     indel_summaries, allele_summaries, allele_details, indel_size_obs = (
         _analyze_guide_indels_and_alleles(classified, ref_set, settings, name)
     )
+    stage(5)
     excision_summaries, excision_sizes = call_paired_excisions(
         classified,
         calls,
@@ -317,18 +374,25 @@ def run_batch(
     progress_callback=None,
     sample_callback=None,
 ) -> BatchResult:
-    """Run `run_single_sample` for each FASTQ. `progress_callback(i, n, sample_name)`
-    is invoked at the *start* of each sample so a GUI can show which file is
-    currently processing (i is 1-based).
+    """Run `run_single_sample` for each FASTQ.
+
+    `progress_callback(i, n, sample_name, *, stage, stage_i, stage_n)` is invoked
+    for each pipeline stage of each sample (i is 1-based).
     """
     settings = settings or PipelineSettings()
     n = len(fastq_paths)
     samples: list[SampleResult] = []
     for i, path in enumerate(fastq_paths):
         name = sample_name_from_path(path)
-        if progress_callback is not None:
-            progress_callback(i + 1, n, name)
-        result = run_single_sample(path, ref_set, settings, sample_name=name)
+        result = run_single_sample(
+            path,
+            ref_set,
+            settings,
+            sample_name=name,
+            progress_callback=progress_callback,
+            sample_i=i + 1,
+            sample_n=n,
+        )
         samples.append(result)
         if sample_callback is not None:
             sample_callback(result)

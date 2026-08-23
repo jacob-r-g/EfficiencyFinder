@@ -74,9 +74,23 @@ class TestPipeline(unittest.TestCase):
                 [str(fq1), str(fq2)],
                 ref,
                 PipelineSettings(min_allele_reads=3),
-                progress_callback=lambda i, n, name: progress.append((i, n, name)),
+                progress_callback=lambda i, n, name, **kw: progress.append(
+                    (i, n, name, kw.get("stage"), kw.get("stage_i"))
+                ),
             )
-            self.assertEqual(progress, [(1, 2, "s1"), (2, 2, "s2")])
+            samples_seen = {(i, n, name) for i, n, name, *_ in progress}
+            self.assertEqual(samples_seen, {(1, 2, "s1"), (2, 2, "s2")})
+            stages_s1 = [stage for i, _n, name, stage, _si in progress if name == "s1"]
+            self.assertEqual(
+                stages_s1,
+                [
+                    "Reading FASTQ",
+                    "Classifying reads",
+                    "Calling editing",
+                    "Measuring indels & alleles",
+                    "Calling paired excision",
+                ],
+            )
             self.assertEqual(len(batch.samples), 2)
             self.assertEqual(len(batch.efficiencies), 2)
             self.assertTrue(any(s.n_samples == 2 for s in batch.shared_alleles))

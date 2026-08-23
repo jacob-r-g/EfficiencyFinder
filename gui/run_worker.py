@@ -12,7 +12,7 @@ from core.settings import PipelineSettings
 
 
 class RunWorker(QThread):
-    progress = Signal(int, int, str)  # i, n, sample_name
+    progress = Signal(int, int, str, str, int, int)  # i, n, sample, stage, stage_i, stage_n
     sample_finished = Signal(object)  # SampleResult
     batch_finished = Signal(object)  # BatchResult
     failed = Signal(str, str, bool)  # message, traceback, is_validation_error
@@ -52,8 +52,17 @@ class RunWorker(QThread):
             return
         self.batch_finished.emit(result)
 
-    def _on_progress(self, i: int, n: int, sample_name: str) -> None:
-        self.progress.emit(i, n, sample_name)
+    def _on_progress(
+        self,
+        i: int,
+        n: int,
+        sample_name: str,
+        *,
+        stage: str = "",
+        stage_i: int = 0,
+        stage_n: int = 0,
+    ) -> None:
+        self.progress.emit(i, n, sample_name, stage, stage_i, stage_n)
 
     def _on_sample(self, sample: SampleResult) -> None:
         self.sample_finished.emit(sample)

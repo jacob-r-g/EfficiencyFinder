@@ -105,10 +105,25 @@ class MainWindow(QMainWindow):
         self._worker = worker
         worker.start()
 
-    def _on_progress(self, i: int, n: int, sample_name: str) -> None:
-        self._progress.setRange(0, n)
-        self._progress.setValue(i - 1)
-        self._status_label.setText(f"Processing sample {i} of {n}: {sample_name}")
+    def _on_progress(
+        self,
+        i: int,
+        n: int,
+        sample_name: str,
+        stage: str = "",
+        stage_i: int = 0,
+        stage_n: int = 0,
+    ) -> None:
+        if stage_n > 0:
+            self._progress.setRange(0, n * stage_n)
+            self._progress.setValue((i - 1) * stage_n + max(stage_i, 1))
+        else:
+            self._progress.setRange(0, n)
+            self._progress.setValue(i - 1)
+        label = f"Processing sample {i} of {n}: {sample_name}"
+        if stage:
+            label = f"{label} — {stage}"
+        self._status_label.setText(label)
 
     def _on_batch_finished(self, batch) -> None:
         self.results.set_batch(batch)

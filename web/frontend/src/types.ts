@@ -32,7 +32,14 @@ export const DEFAULT_SETTINGS: PipelineSettings = {
   min_excision_fraction: 0.4,
 };
 
-export type JobProgress = { i: number; n: number; sample: string };
+export type JobProgress = {
+  i: number;
+  n: number;
+  sample: string;
+  stage?: string;
+  stage_i?: number;
+  stage_n?: number;
+};
 
 export type JobStatus = {
   id: string;

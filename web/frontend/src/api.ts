@@ -72,6 +72,6 @@ export async function pollJob(
     const status = await getJob(jobId);
     onProgress(status);
     if (status.status === "done" || status.status === "failed") return status;
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 250));
   }
 }

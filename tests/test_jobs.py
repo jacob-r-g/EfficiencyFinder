@@ -35,7 +35,7 @@ class TestJobManager(unittest.TestCase):
         gate = threading.Event()
 
         def analyze(fasta, fastqs, settings, on_progress):
-            on_progress(1, 1, "s")
+            on_progress(1, 1, "s", stage="Classifying reads", stage_i=2, stage_n=5)
             gate.wait(timeout=1)
             return {"ok": True, "fasta": fasta.name}
 
@@ -43,7 +43,17 @@ class TestJobManager(unittest.TestCase):
         uid = self._seed_upload()
         state = manager.submit(uid, "ref.fa", ["s.fq"], {})
         _wait(manager, state.id, "running")
-        self.assertEqual(manager.get(state.id).progress, {"i": 1, "n": 1, "sample": "s"})
+        self.assertEqual(
+            manager.get(state.id).progress,
+            {
+                "i": 1,
+                "n": 1,
+                "sample": "s",
+                "stage": "Classifying reads",
+                "stage_i": 2,
+                "stage_n": 5,
+            },
+        )
         gate.set()
         _wait(manager, state.id, "done")
         done = manager.get(state.id)
