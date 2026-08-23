@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from web.backend import job_routes, uploads
 from web.backend.jobs import JobManager
 from web.backend.store import Store
+from web.backend.version import app_version
 
 DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
@@ -41,7 +42,7 @@ def create_app(store: Store | None = None, analyze=None) -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"status": "ok"}
+        return {"status": "ok", "version": app_version()}
 
     _mount_frontend(app)
     return app

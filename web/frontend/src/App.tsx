@@ -5,6 +5,7 @@ import FilePanel from "./FilePanel";
 import ResultsView from "./ResultsView";
 import SettingsPanel from "./SettingsPanel";
 import { DEFAULT_SETTINGS, type BatchResult, type PipelineSettings } from "./types";
+import { APP_VERSION } from "./version";
 
 export default function App() {
   const [view, setView] = useState<"analyze" | "docs">("analyze");
@@ -95,7 +96,12 @@ export default function App() {
   return (
     <>
       <header className="app-header">
-        <h1>CRISPR Amplicon Editing Efficiency</h1>
+        <div className="app-title">
+          <h1>CRISPR Amplicon Editing Efficiency</h1>
+          <span className="app-version" title="App version — bump VERSION before deploy">
+            v{APP_VERSION}
+          </span>
+        </div>
         <nav className="app-nav">
           <button
             type="button"

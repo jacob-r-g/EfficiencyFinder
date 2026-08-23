@@ -3,12 +3,14 @@ WORKDIR /ui
 COPY web/frontend/package.json web/frontend/package-lock.json ./
 RUN npm ci
 COPY web/frontend/ ./
+COPY VERSION ./VERSION
 RUN npm run build
 
 FROM python:3.12-slim
 WORKDIR /app
 COPY web/backend/requirements.txt /app/web/backend/requirements.txt
 RUN pip install --no-cache-dir -r /app/web/backend/requirements.txt
+COPY VERSION /app/VERSION
 COPY core /app/core
 COPY web /app/web
 COPY --from=frontend /ui/dist /app/web/frontend/dist
