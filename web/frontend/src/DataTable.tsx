@@ -47,9 +47,11 @@ export default function DataTable({ columns, rows, filename, onSelect }: Props) 
       })
     : filtered;
 
-  const stickyKeys = columns.filter((c) => c === "sample" || c === "guide").slice(0, 2);
-  const stickyIndex = (col: string) => {
-    const i = stickyKeys.indexOf(col);
+  const stickyKeys = columns
+    .filter((c): c is "sample" | "guide" => c === "sample" || c === "guide")
+    .slice(0, 2);
+  const stickyIndex = (col: string): number | null => {
+    const i = stickyKeys.indexOf(col as "sample" | "guide");
     return i >= 0 ? i : null;
   };
 

@@ -13,6 +13,8 @@ export default function App() {
   const [combineFastqs, setCombineFastqs] = useState(false);
   const [settings, setSettings] = useState<PipelineSettings>(DEFAULT_SETTINGS);
   const [running, setRunning] = useState(false);
+  const [progressValue, setProgressValue] = useState<number | null>(null);
+  const [progressMax, setProgressMax] = useState<number | null>(null);
   const [status, setStatus] = useState(
     "Select a reference FASTA and one or more FASTQ files, then click Run analysis.",
   );
@@ -24,6 +26,8 @@ export default function App() {
     setRunning(true);
     setError(null);
     setResult(null);
+    setProgressValue(null);
+    setProgressMax(null);
     try {
       setStatus("Uploading files…");
       const uploadId = await createUpload();
@@ -41,15 +45,30 @@ export default function App() {
         combineFastqs && fastqs.length > 1,
       );
       const done = await pollJob(job.id, (s) => {
-        if (s.status === "queued") setStatus("Queued…");
-        else if (s.progress) {
-          if (s.progress.i === 0) setStatus("Combining FASTQs…");
-          else {
-            setStatus(
-              `Processing sample ${s.progress.i} of ${s.progress.n}: ${s.progress.sample}`,
-            );
+        if (s.status === "queued") {
+          setStatus("Queued…");
+          setProgressValue(null);
+          setProgressMax(null);
+          return;
+        }
+        const p = s.progress;
+        if (p) {
+          const stage = p.stage?.trim() || "";
+          if (p.i === 0) {
+            setStatus(stage || "Preparing…");
+            setProgressValue(null);
+            setProgressMax(null);
+          } else {
+            const sampleBit = `Sample ${p.i} of ${p.n}: ${p.sample}`;
+            setStatus(stage ? `${sampleBit} — ${stage}` : sampleBit);
+            if (p.stage_n && p.stage_n > 0) {
+              setProgressMax(p.n * p.stage_n);
+              setProgressValue((p.i - 1) * p.stage_n + (p.stage_i || 1));
+            }
           }
-        } else if (s.status === "running") setStatus("Running…");
+        } else if (s.status === "running") {
+          setStatus("Running…");
+        }
       });
       if (done.status === "failed") {
         setError(done.error ?? "Run failed.");
@@ -58,6 +77,8 @@ export default function App() {
       }
       const batch = await getResults(done.id);
       setResult(batch);
+      setProgressValue(null);
+      setProgressMax(null);
       setStatus(
         `Done. ${batch.samples.length} sample(s) · ${batch.n_assigned.toLocaleString()} assigned reads · ${batch.n_unassigned.toLocaleString()} unassigned`,
       );
@@ -66,6 +87,8 @@ export default function App() {
       setStatus("Run failed.");
     } finally {
       setRunning(false);
+      setProgressValue(null);
+      setProgressMax(null);
     }
   }
 
@@ -105,7 +128,13 @@ export default function App() {
             onRun={run}
           />
           <SettingsPanel value={settings} disabled={running} onChange={setSettings} />
-          {running && <progress className="run-progress" />}
+          {running && (
+            <progress
+              className="run-progress"
+              value={progressValue ?? undefined}
+              max={progressMax ?? undefined}
+            />
+          )}
           <p className="status">{status}</p>
           {error && <pre className="error">{error}</pre>}
           <ResultsView result={result} />
