@@ -177,6 +177,9 @@ td {
   text-align: left;
   padding: 4px 8px;
   border-bottom: 1px solid #eee;
+}
+
+td {
   white-space: nowrap;
   max-width: 420px;
   overflow: hidden;
@@ -188,6 +191,52 @@ th {
   background: #f7f7f8;
   position: sticky;
   top: 0;
+  z-index: 2;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  max-width: 6.5rem;
+  min-width: 3.25rem;
+  line-height: 1.2;
+  vertical-align: bottom;
+  word-break: break-word;
+  font-weight: 600;
+  box-shadow: 0 1px 0 #e5e5e5;
+}
+
+th.sticky-col,
+td.sticky-col {
+  position: sticky;
+  z-index: 1;
+  background: #fff;
+  box-shadow: 1px 0 0 #eee;
+}
+
+th.sticky-col {
+  z-index: 3;
+  background: #f7f7f8;
+}
+
+th.sticky-col-0,
+td.sticky-col-0 {
+  left: 0;
+  min-width: 7rem;
+  max-width: 10rem;
+}
+
+th.sticky-col-1,
+td.sticky-col-1 {
+  left: 7rem;
+  min-width: 5.5rem;
+  max-width: 8rem;
+}
+
+tbody tr:nth-child(even) td.sticky-col {
+  background: #fafafa;
+}
+
+tbody tr.selected td.sticky-col {
+  background: #dbeafe;
 }
 
 tbody tr:nth-child(even) {
