@@ -47,6 +47,12 @@ export default function DataTable({ columns, rows, filename, onSelect }: Props) 
       })
     : filtered;
 
+  const stickyKeys = columns.filter((c) => c === "sample" || c === "guide").slice(0, 2);
+  const stickyIndex = (col: string) => {
+    const i = stickyKeys.indexOf(col);
+    return i >= 0 ? i : null;
+  };
+
   return (
     <div className="table-tab">
       <div className="row">
@@ -69,19 +75,23 @@ export default function DataTable({ columns, rows, filename, onSelect }: Props) 
         <table>
           <thead>
             <tr>
-              {columns.map((c) => (
-                <th
-                  key={c}
-                  onClick={() =>
-                    setSort((s) =>
-                      s?.key === c ? { key: c, dir: s.dir === 1 ? -1 : 1 } : { key: c, dir: 1 },
-                    )
-                  }
-                >
-                  {c}
-                  {sort?.key === c ? (sort.dir === 1 ? " ▲" : " ▼") : ""}
-                </th>
-              ))}
+              {columns.map((c) => {
+                const pin = stickyIndex(c);
+                return (
+                  <th
+                    key={c}
+                    className={pin !== null ? `sticky-col sticky-col-${pin}` : undefined}
+                    onClick={() =>
+                      setSort((s) =>
+                        s?.key === c ? { key: c, dir: s.dir === 1 ? -1 : 1 } : { key: c, dir: 1 },
+                      )
+                    }
+                  >
+                    {c}
+                    {sort?.key === c ? (sort.dir === 1 ? " ▲" : " ▼") : ""}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -95,9 +105,17 @@ export default function DataTable({ columns, rows, filename, onSelect }: Props) 
                   onSelect?.(next === null ? null : sorted[next]);
                 }}
               >
-                {columns.map((c) => (
-                  <td key={c}>{formatCell(row[c])}</td>
-                ))}
+                {columns.map((c) => {
+                  const pin = stickyIndex(c);
+                  return (
+                    <td
+                      key={c}
+                      className={pin !== null ? `sticky-col sticky-col-${pin}` : undefined}
+                    >
+                      {formatCell(row[c])}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
