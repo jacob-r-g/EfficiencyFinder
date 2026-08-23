@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS } from "./types";
+import { APP_VERSION } from "./version";
 
 type TermProps = { name: string; children: React.ReactNode };
 
@@ -272,6 +273,17 @@ export default function DocsPanel() {
           intervening span.
         </Term>
       </dl>
+
+      <h2>Version</h2>
+      <p className="docs-version">
+        Deployed build: <strong>v{APP_VERSION}</strong>
+      </p>
+      <p>
+        Bump the repo-root <code>VERSION</code> file before each deploy. After the
+        site updates, confirm this page (or the <code>v…</code> label in the header)
+        shows the new number. <code>/health</code> also returns{" "}
+        <code>{`{"version": "${APP_VERSION}"}`}</code>.
+      </p>
     </article>
   );
 }

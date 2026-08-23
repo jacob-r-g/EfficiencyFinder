@@ -20,7 +20,10 @@ class TestUploadApi(unittest.TestCase):
     def test_health(self):
         res = self.client.get("/health")
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.json(), {"status": "ok"})
+        body = res.json()
+        self.assertEqual(body["status"], "ok")
+        self.assertIn("version", body)
+        self.assertTrue(body["version"])
 
     def test_chunked_upload_assembles_file(self):
         uid = self.client.post("/api/uploads").json()["upload_id"]
