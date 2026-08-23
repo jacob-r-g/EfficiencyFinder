@@ -138,6 +138,8 @@ export default function DocsPanel() {
       <p>
         Net indel sizes beyond <code>artifact_size_threshold</code> are dropped as likely
         nanopore concatemer artifacts (not used in these counts or the histogram).
+        Select a summary row to plot the indel-size distribution for that sample and
+        guide (not pooled across the whole batch).
       </p>
 
       <h2>Alleles tab</h2>

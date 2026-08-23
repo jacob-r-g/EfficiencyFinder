@@ -43,6 +43,7 @@ export default function ResultsView({ result }: Props) {
   const [alleleTab, setAlleleTab] = useState<"sample" | "shared">("sample");
   const [hideZeros, setHideZeros] = useState(true);
   const [detailFilter, setDetailFilter] = useState<Record<string, unknown> | null>(null);
+  const [indelFilter, setIndelFilter] = useState<Record<string, unknown> | null>(null);
   const [excisionFilter, setExcisionFilter] = useState<Record<string, unknown> | null>(null);
 
   if (!result) {
@@ -72,6 +73,18 @@ export default function ResultsView({ result }: Props) {
       !excisionFilter ||
       (d.sample === excisionFilter.sample && d.amplicon === excisionFilter.amplicon),
   );
+  const indelObs = result.indel_size_obs ?? [];
+  const histSizes = indelFilter
+    ? indelObs
+        .filter(
+          (o) =>
+            o.sample === indelFilter.sample && o.guide === indelFilter.guide,
+        )
+        .map((o) => o.indel_size_bp)
+    : [];
+  const histTitle = indelFilter
+    ? `Indel size distribution — ${String(indelFilter.sample)} / ${String(indelFilter.guide)}`
+    : "Indel size distribution (select a summary row)";
 
   return (
     <section className="results">
@@ -102,8 +115,13 @@ export default function ResultsView({ result }: Props) {
       )}
       {tab === "Indel & Frame" && (
         <>
-          <IndelHistogram sizes={result.indel_sizes} />
-          <DataTable columns={INDEL} rows={indelRows} filename="indel_frame.csv" />
+          <DataTable
+            columns={INDEL}
+            rows={indelRows}
+            filename="indel_frame.csv"
+            onSelect={setIndelFilter}
+          />
+          <IndelHistogram sizes={histSizes} title={histTitle} />
         </>
       )}
       {tab === "Alleles" && (

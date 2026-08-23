@@ -49,6 +49,12 @@ export type SampleCounts = {
   n_unassigned: number;
 };
 
+export type IndelSizeObservation = {
+  sample: string;
+  guide: string;
+  indel_size_bp: number;
+};
+
 export type BatchResult = {
   samples: SampleCounts[];
   efficiencies: Record<string, unknown>[];
@@ -56,6 +62,7 @@ export type BatchResult = {
   allele_summaries: Record<string, unknown>[];
   allele_details: Record<string, unknown>[];
   shared_alleles: Record<string, unknown>[];
+  indel_size_obs: IndelSizeObservation[];
   indel_sizes: number[];
   excision_summaries: Record<string, unknown>[];
   excision_sizes: Record<string, unknown>[];
