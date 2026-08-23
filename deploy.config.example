@@ -1,5 +1,19 @@
+# Deployment Configuration for EfficiencyFinder → Unraid
+#
+# cp deploy.config.example .deploy.config
+# ./deploy.sh
+# (enter the Unraid SSH password when prompted — once per run)
+
+# Unraid server address (IP or hostname)
 UNRAID_HOST="192.168.1.100"
+
+# SSH username for Unraid
 UNRAID_USER="root"
+
+# Deployment directory on Unraid
 UNRAID_DEPLOY_PATH="/mnt/user/appdata/efficiencyfinder-webapp"
-# Optional. Leave empty to use the default SSH key / agent.
+
+# Optional: path to an SSH private key. If set, password auth is not used.
+# Leave empty / commented to be prompted for the Unraid password in the terminal.
+# SSH_KEY_PATH="~/.ssh/id_rsa"
 SSH_KEY_PATH=""
