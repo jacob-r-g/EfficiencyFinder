@@ -34,6 +34,15 @@ class IndelSummary:
 
 
 @dataclass
+class IndelSizeObservation:
+    """One size-callable read, keyed for per-sample / per-guide histograms."""
+
+    sample: str
+    guide: str
+    indel_size_bp: int
+
+
+@dataclass
 class AlleleSummary:
     sample: str
     guide: str
@@ -81,7 +90,8 @@ class SampleResult:
     indel_summaries: list[IndelSummary]
     allele_summaries: list[AlleleSummary]
     allele_details: list[AlleleDetail]
-    indel_sizes: list[int]  # non-artifact sizes (includes WT 0) for histogram filtering
+    indel_size_obs: list[IndelSizeObservation]
+    indel_sizes: list[int]  # flat sizes for PNG export (includes WT 0)
     excision_summaries: list[ExcisionSummary]
     excision_sizes: list[ExcisionSizeRow]
 
@@ -94,6 +104,7 @@ class BatchResult:
     allele_summaries: list[AlleleSummary] = field(default_factory=list)
     allele_details: list[AlleleDetail] = field(default_factory=list)
     shared_alleles: list[SharedAllele] = field(default_factory=list)
+    indel_size_obs: list[IndelSizeObservation] = field(default_factory=list)
     indel_sizes: list[int] = field(default_factory=list)
     excision_summaries: list[ExcisionSummary] = field(default_factory=list)
     excision_sizes: list[ExcisionSizeRow] = field(default_factory=list)
@@ -107,11 +118,16 @@ def _analyze_guide_indels_and_alleles(
     ref_set: ReferenceSet,
     settings: PipelineSettings,
     sample_name: str,
-) -> tuple[list[IndelSummary], list[AlleleSummary], list[AlleleDetail], list[int]]:
+) -> tuple[
+    list[IndelSummary],
+    list[AlleleSummary],
+    list[AlleleDetail],
+    list[IndelSizeObservation],
+]:
     indel_summaries: list[IndelSummary] = []
     allele_summaries: list[AlleleSummary] = []
     allele_details: list[AlleleDetail] = []
-    hist_sizes: list[int] = []
+    hist_obs: list[IndelSizeObservation] = []
 
     for gname, gi in ref_set.guides.items():
         amp_seq = ref_set.amplicons[gi.amplicon]
@@ -133,7 +149,11 @@ def _analyze_guide_indels_and_alleles(
             if abs(size) > settings.artifact_size_threshold:
                 continue
             size_calls.append((cr.read_id, size, seq))
-            hist_sizes.append(size)
+            hist_obs.append(
+                IndelSizeObservation(
+                    sample=sample_name, guide=gname, indel_size_bp=size
+                )
+            )
 
         n = len(size_calls)
         wt = sum(1 for _rid, z, _seq in size_calls if z == 0)
@@ -204,7 +224,7 @@ def _analyze_guide_indels_and_alleles(
                 )
             )
 
-    return indel_summaries, allele_summaries, allele_details, hist_sizes
+    return indel_summaries, allele_summaries, allele_details, hist_obs
 
 
 def run_single_sample(
@@ -237,7 +257,7 @@ def run_single_sample(
     efficiencies = summarize_efficiency(
         calls, ref_set.guides, amp_read_counts, sample=name
     )
-    indel_summaries, allele_summaries, allele_details, indel_sizes = (
+    indel_summaries, allele_summaries, allele_details, indel_size_obs = (
         _analyze_guide_indels_and_alleles(classified, ref_set, settings, name)
     )
     excision_summaries, excision_sizes = call_paired_excisions(
@@ -259,7 +279,8 @@ def run_single_sample(
         indel_summaries=indel_summaries,
         allele_summaries=allele_summaries,
         allele_details=allele_details,
-        indel_sizes=indel_sizes,
+        indel_size_obs=indel_size_obs,
+        indel_sizes=[o.indel_size_bp for o in indel_size_obs],
         excision_summaries=excision_summaries,
         excision_sizes=excision_sizes,
     )
@@ -313,6 +334,7 @@ def run_batch(
             sample_callback(result)
 
     details = [d for s in samples for d in s.allele_details]
+    indel_size_obs = [o for s in samples for o in s.indel_size_obs]
     batch = BatchResult(
         samples=samples,
         efficiencies=[e for s in samples for e in s.efficiencies],
@@ -320,7 +342,8 @@ def run_batch(
         allele_summaries=[row for s in samples for row in s.allele_summaries],
         allele_details=details,
         shared_alleles=_shared_alleles(details),
-        indel_sizes=[z for s in samples for z in s.indel_sizes],
+        indel_size_obs=indel_size_obs,
+        indel_sizes=[o.indel_size_bp for o in indel_size_obs],
         excision_summaries=[row for s in samples for row in s.excision_summaries],
         excision_sizes=[row for s in samples for row in s.excision_sizes],
         n_reads=sum(s.n_reads for s in samples),

@@ -10,15 +10,25 @@ import { Bar } from "react-chartjs-2";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-type Props = { sizes: number[] };
+type Props = {
+  sizes: number[];
+  title?: string;
+};
 
-export default function IndelHistogram({ sizes }: Props) {
-  if (!sizes.length) return null;
+export default function IndelHistogram({ sizes, title }: Props) {
+  if (!sizes.length) {
+    return (
+      <p className="hint">
+        {title ?? "No indel size calls for this selection."}
+      </p>
+    );
+  }
   const counts = new Map<number, number>();
   for (const z of sizes) counts.set(z, (counts.get(z) ?? 0) + 1);
   const labels = [...counts.keys()].sort((a, b) => a - b);
   return (
     <div className="histogram">
+      {title ? <p className="hint">{title}</p> : null}
       <Bar
         data={{
           labels: labels.map(String),
