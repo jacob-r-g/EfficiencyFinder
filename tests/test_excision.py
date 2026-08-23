@@ -21,6 +21,7 @@ from tests.helpers import (
     GUIDE2A_NAME,
     GUIDE2B_NAME,
     GUIDE2_END,
+    GUIDE2_START,
     valid_two_guide_fasta,
     write_fastq,
 )
@@ -71,13 +72,18 @@ class TestPairedExcision(unittest.TestCase):
             [cr], calls, self.ref.guides, self.ref.guides_by_amplicon, self.settings, "s"
         )
         row = summaries[0]
-        expected = GUIDE2_END - GUIDE1_START
-        self.assertEqual(row.expected_dropout_bp, expected)
+        # SpCas9 cuts 3 bp upstream of PAM → cut-to-cut expected dropout.
+        cut_left = GUIDE1_START + 17
+        cut_right = GUIDE2_START + 17
+        expected_cuts = cut_right - cut_left
+        # AMP2_EXCISION drops both full guides + MID; flank-measured size is larger.
+        measured = GUIDE2_END - GUIDE1_START
+        self.assertEqual(row.expected_dropout_bp, expected_cuts)
         self.assertEqual(row.n_spanning_reads, 1)
         self.assertEqual(row.n_simultaneous_large_del, 1)
         self.assertEqual(row.n_confirmed_excision, 1)
-        self.assertEqual(row.median_excision_bp, float(expected))
-        self.assertEqual(sizes[0].excision_size_bp, expected)
+        self.assertEqual(row.median_excision_bp, float(measured))
+        self.assertEqual(sizes[0].excision_size_bp, measured)
         self.assertEqual(sizes[0].n_reads, 1)
 
     def test_single_guide_small_indel_is_not_paired_excision(self):

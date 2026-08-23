@@ -194,8 +194,8 @@ export default function DocsPanel() {
       </ul>
       <dl>
         <Term name="expected_dropout_bp">
-          Distance from the first guide’s start to the last guide’s end on the WT
-          amplicon.
+          Distance between SpCas9 cut sites on the WT amplicon (each cut is 3 bp
+          upstream of that guide’s NGG PAM), not the full guide-span.
         </Term>
         <Term name="n_spanning_reads">
           Reads with a call at every guide on the amplicon (no not_sequenced).
