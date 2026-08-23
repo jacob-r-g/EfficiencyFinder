@@ -78,6 +78,10 @@ def parse_fastq(path: str) -> list[tuple[str, str]]:
     return reads
 
 
+# SpCas9: NGG PAM is 3 bp; cut is 3 bp upstream of the PAM (between spacer nt 17–18).
+PAM_LEN = 3
+
+
 @dataclass
 class GuideInfo:
     name: str
@@ -87,6 +91,8 @@ class GuideInfo:
     target_end: int
     left_flank: str
     right_flank: str
+    cut_pos: int  # 0-based amplicon index of the Cas9 cut (between cut_pos-1 and cut_pos)
+    strand: str  # "+" if guide matches the amplicon forward strand, else "-"
 
 
 @dataclass
@@ -127,6 +133,10 @@ def load_reference_set(fasta_path: str, flank: int = 25) -> ReferenceSet:
         pos = amp.find(gseq)
         if pos >= 0:
             target_seq = gseq
+            strand = "+"
+            # PAM at 3' end of guide; cut 3 bp upstream of PAM.
+            spacer_len = max(0, len(gseq) - PAM_LEN)
+            cut_pos = pos + max(0, spacer_len - PAM_LEN)
         else:
             pos = amp.find(revcomp(gseq))
             if pos < 0:
@@ -136,6 +146,11 @@ def load_reference_set(fasta_path: str, flank: int = 25) -> ReferenceSet:
                     f"substring of the amplicon (protospacer+PAM, typically 23bp)."
                 )
             target_seq = amp[pos : pos + len(gseq)]
+            strand = "-"
+            # On the reverse strand PAM sits at the 5' end of the forward window;
+            # cut is 3 bp upstream of PAM toward the spacer (= forward +6 for 23 bp).
+            spacer_len = max(0, len(gseq) - PAM_LEN)
+            cut_pos = pos + len(gseq) - max(0, spacer_len - PAM_LEN)
 
         gi = GuideInfo(
             name=gname,
@@ -145,6 +160,8 @@ def load_reference_set(fasta_path: str, flank: int = 25) -> ReferenceSet:
             target_end=pos + len(target_seq),
             left_flank=amp[max(0, pos - flank) : pos],
             right_flank=amp[pos + len(target_seq) : pos + len(target_seq) + flank],
+            cut_pos=cut_pos,
+            strand=strand,
         )
         guides[gname] = gi
         guides_by_amplicon[ampname].append(gname)

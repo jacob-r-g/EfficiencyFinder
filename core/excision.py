@@ -50,13 +50,22 @@ def _pct(numer: int, denom: int) -> float:
 
 
 def _ordered_guides(gnames, guides):
-    return sorted(gnames, key=lambda g: (guides[g].target_start, guides[g].name))
+    return sorted(gnames, key=lambda g: (guides[g].cut_pos, guides[g].name))
+
+
+def _expected_dropout_bp(left_gi, right_gi) -> int:
+    """Distance between Cas9 cut sites (3 bp upstream of each PAM)."""
+    return abs(right_gi.cut_pos - left_gi.cut_pos)
 
 
 def _measure_dropout(read_seq, left_gi, right_gi, mismatch_thresh_flank: int):
-    """Return dropout bp between outer flanks, or None if they cannot be matched."""
+    """Return measured outer-flank dropout bp, or None if flanks cannot be matched.
+
+    Uses the WT distance between the leftmost left-flank and rightmost right-flank.
+    For a clean cut-to-cut join this equals the Cas9 cut-to-cut distance.
+    """
     lf, rf = left_gi.left_flank, right_gi.right_flank
-    expected = right_gi.target_end - left_gi.target_start
+    wt_flank_gap = right_gi.target_end - left_gi.target_start
     lpos, lmm = find_best_match(lf, read_seq)
     rpos, rmm = find_best_match(rf, read_seq)
     l_ok = lpos is not None and lmm <= mismatch_thresh_flank
@@ -66,7 +75,7 @@ def _measure_dropout(read_seq, left_gi, right_gi, mismatch_thresh_flank: int):
     if rpos < lpos + len(lf) - 5:
         return None
     observed_gap = rpos - (lpos + len(lf))
-    return expected - observed_gap
+    return wt_flank_gap - observed_gap
 
 
 def call_paired_excisions(
@@ -82,7 +91,9 @@ def call_paired_excisions(
     An amplicon is only considered if it has 2+ guides. A spanning read is a
     paired-excision candidate when *every* guide on that amplicon is
     edited_deletion_large. Confirmation requires an outer-flank dropout of at
-    least max(min_excision_bp, expected * min_excision_fraction).
+    least max(min_excision_bp, expected_cut_to_cut * min_excision_fraction).
+    Expected dropout is the distance between SpCas9 cut sites (3 bp upstream
+    of each NGG PAM), not the full guide-span.
     """
     s = settings or PipelineSettings()
 
@@ -114,7 +125,7 @@ def call_paired_excisions(
         ordered = _ordered_guides(gnames, guides)
         left_gi = guides[ordered[0]]
         right_gi = guides[ordered[-1]]
-        expected = right_gi.target_end - left_gi.target_start
+        expected = _expected_dropout_bp(left_gi, right_gi)
         min_drop = max(s.min_excision_bp, int(expected * s.min_excision_fraction))
 
         spanning = 0

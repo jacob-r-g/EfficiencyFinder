@@ -84,6 +84,8 @@ class TestLoadReferenceSet(unittest.TestCase):
             self.assertEqual(gi.target, GUIDE1)
             self.assertEqual(gi.target_start, GUIDE1_START)
             self.assertEqual(gi.target_end, GUIDE1_END)
+            self.assertEqual(gi.strand, "+")
+            self.assertEqual(gi.cut_pos, GUIDE1_START + 17)
             self.assertEqual(gi.left_flank, AMP1[GUIDE1_START - 25 : GUIDE1_START])
             self.assertEqual(gi.right_flank, AMP1[GUIDE1_END : GUIDE1_END + 25])
             self.assertEqual(ref.guides_by_amplicon[AMP1_NAME], [GUIDE1_NAME])
@@ -110,6 +112,8 @@ class TestLoadReferenceSet(unittest.TestCase):
             self.assertEqual(gi.target, GUIDE1)
             self.assertEqual(gi.target_start, GUIDE1_START)
             self.assertEqual(gi.target_end, GUIDE1_END)
+            self.assertEqual(gi.strand, "-")
+            self.assertEqual(gi.cut_pos, GUIDE1_START + 6)
 
     def test_mismatched_guide_amplicon_name(self):
         with tempfile.TemporaryDirectory() as td:
