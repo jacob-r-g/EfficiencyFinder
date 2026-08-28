@@ -3,6 +3,10 @@ import DataTable from "./DataTable";
 import IndelHistogram from "./IndelHistogram";
 import type { BatchResult } from "./types";
 
+const ASSIGNMENT_SAMPLE = [
+  "sample_name", "n_reads", "n_assigned", "n_unassigned", "pct_assigned",
+];
+const ASSIGNMENT_AMP = ["sample", "amplicon", "n_reads", "pct_of_sample"];
 const EFFICIENCY = [
   "sample", "guide", "amplicon", "total_amplicon_reads", "reads_spanning_target",
   "not_sequenced", "wt_unedited", "edited", "edited_insertion", "edited_deletion_small",
@@ -29,7 +33,7 @@ const EXCISION = [
 ];
 const EXCISION_SIZE = ["sample", "amplicon", "excision_size_bp", "n_reads", "pct_of_confirmed"];
 
-const TABS = ["Efficiency", "Indel & Frame", "Alleles", "Paired excision"] as const;
+const TABS = ["Assignment", "Efficiency", "Indel & Frame", "Alleles", "Paired excision"] as const;
 
 function hasReads(row: Record<string, unknown>, key: string): boolean {
   const n = row[key];
@@ -39,7 +43,7 @@ function hasReads(row: Record<string, unknown>, key: string): boolean {
 type Props = { result: BatchResult | null };
 
 export default function ResultsView({ result }: Props) {
-  const [tab, setTab] = useState<(typeof TABS)[number]>("Efficiency");
+  const [tab, setTab] = useState<(typeof TABS)[number]>("Assignment");
   const [alleleTab, setAlleleTab] = useState<"sample" | "shared">("sample");
   const [hideZeros, setHideZeros] = useState(true);
   const [detailFilter, setDetailFilter] = useState<Record<string, unknown> | null>(null);
@@ -62,6 +66,11 @@ export default function ResultsView({ result }: Props) {
   const excisionRows = hideZeros
     ? result.excision_summaries.filter((r) => hasReads(r, "n_spanning_reads"))
     : result.excision_summaries;
+  const ampAssignments = hideZeros
+    ? (result.amplicon_assignments ?? []).filter((r) => hasReads(r, "n_reads"))
+    : result.amplicon_assignments ?? [];
+  const sampleRows = result.samples.map((s) => ({ ...s, sample: s.sample_name }));
+  const anyUnassigned = result.samples.some((s) => s.n_unassigned > 0);
 
   const details = result.allele_details.filter(
     (d) =>
@@ -110,6 +119,32 @@ export default function ResultsView({ result }: Props) {
           Hide zero-read rows
         </label>
       </div>
+      {tab === "Assignment" && (
+        <>
+          <p className="hint">
+            How reads were classified to reference amplicons. Unassigned reads did not
+            match any amplicon well enough — they may be off-target PCR products or
+            chimeras.
+          </p>
+          {anyUnassigned && (
+            <p className="hint hint-warn">
+              Some reads are unassigned. If an amplicon has very few assigned reads but
+              you see a gel band, check for non-specific amplification in the unassigned
+              pool.
+            </p>
+          )}
+          <DataTable
+            columns={ASSIGNMENT_SAMPLE}
+            rows={sampleRows}
+            filename="assignment_by_sample.csv"
+          />
+          <DataTable
+            columns={ASSIGNMENT_AMP}
+            rows={ampAssignments}
+            filename="assignment_by_amplicon.csv"
+          />
+        </>
+      )}
       {tab === "Efficiency" && (
         <DataTable columns={EFFICIENCY} rows={efficiencies} filename="efficiency.csv" />
       )}

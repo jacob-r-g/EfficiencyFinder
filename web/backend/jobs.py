@@ -61,6 +61,9 @@ def default_analyze(
             "n_reads": s.n_reads,
             "n_assigned": s.n_assigned,
             "n_unassigned": s.n_unassigned,
+            "pct_assigned": round(100.0 * s.n_assigned / s.n_reads, 1)
+            if s.n_reads
+            else None,
         }
         for s in batch.samples
     ]

@@ -152,6 +152,26 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(len(result.indel_summaries), 2)
             self.assertEqual(result.excision_summaries[0].n_simultaneous_large_del, 0)
 
+    def test_unassigned_reads_reported(self):
+        junk = random_dna(len(AMP1), seed=42)
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            fa = valid_single_guide_fasta(td / "ref.fa")
+            fq = write_fastq(
+                td / "mix.fastq",
+                [("wt", AMP1), ("wt2", AMP1), ("junk", junk)],
+            )
+            ref = load_reference_set(str(fa))
+            batch = run_batch([str(fq)], ref)
+            self.assertEqual(batch.samples[0].n_reads, 3)
+            self.assertEqual(batch.samples[0].n_assigned, 2)
+            self.assertEqual(batch.samples[0].n_unassigned, 1)
+            self.assertEqual(len(batch.amplicon_assignments), 1)
+            row = batch.amplicon_assignments[0]
+            self.assertEqual(row.amplicon, AMP1_NAME)
+            self.assertEqual(row.n_reads, 2)
+            self.assertEqual(row.pct_of_sample, 66.7)
+
     def test_histogram_export(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "h.png"
