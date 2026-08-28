@@ -54,6 +54,33 @@ export default function DocsPanel() {
         Only base sequence is used.
       </p>
 
+      <h2>Assignment tab</h2>
+      <p>
+        Shows how each FASTQ’s reads were classified before editing analysis. Use this
+        to spot off-target amplification or reads that never map to your reference
+        amplicons.
+      </p>
+      <dl>
+        <Term name="n_reads">
+          Total reads in the FASTQ for this sample.
+        </Term>
+        <Term name="n_assigned">
+          Reads assigned to a reference amplicon (k-mer classification score above the
+          threshold).
+        </Term>
+        <Term name="n_unassigned">
+          Reads that did not match any amplicon. These are excluded from editing
+          efficiency and indel tables.
+        </Term>
+        <Term name="pct_assigned">
+          <code>100 × n_assigned / n_reads</code>.
+        </Term>
+        <Term name="amplicon / n_reads / pct_of_sample">
+          Per-amplicon breakdown: how many assigned reads went to each amplicon, and
+          what fraction of the sample’s total reads that is.
+        </Term>
+      </dl>
+
       <h2>Efficiency tab</h2>
       <p>
         One row per guide × sample. Editing status is called independently for each

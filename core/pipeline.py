@@ -111,6 +111,14 @@ class SharedAllele:
 
 
 @dataclass
+class AmpliconAssignment:
+    sample: str
+    amplicon: str
+    n_reads: int
+    pct_of_sample: float
+
+
+@dataclass
 class SampleResult:
     sample_name: str
     fastq_path: str
@@ -140,9 +148,25 @@ class BatchResult:
     indel_sizes: list[int] = field(default_factory=list)
     excision_summaries: list[ExcisionSummary] = field(default_factory=list)
     excision_sizes: list[ExcisionSizeRow] = field(default_factory=list)
+    amplicon_assignments: list[AmpliconAssignment] = field(default_factory=list)
     n_reads: int = 0
     n_assigned: int = 0
     n_unassigned: int = 0
+
+
+def _amplicon_assignments(samples: list[SampleResult]) -> list[AmpliconAssignment]:
+    rows: list[AmpliconAssignment] = []
+    for s in samples:
+        for amp, count in sorted(s.amp_read_counts.items()):
+            rows.append(
+                AmpliconAssignment(
+                    sample=s.sample_name,
+                    amplicon=amp,
+                    n_reads=count,
+                    pct_of_sample=_pct(count, s.n_reads),
+                )
+            )
+    return rows
 
 
 def _analyze_guide_indels_and_alleles(
@@ -410,6 +434,7 @@ def run_batch(
         indel_sizes=[o.indel_size_bp for o in indel_size_obs],
         excision_summaries=[row for s in samples for row in s.excision_summaries],
         excision_sizes=[row for s in samples for row in s.excision_sizes],
+        amplicon_assignments=_amplicon_assignments(samples),
         n_reads=sum(s.n_reads for s in samples),
         n_assigned=sum(s.n_assigned for s in samples),
         n_unassigned=sum(s.n_unassigned for s in samples),
