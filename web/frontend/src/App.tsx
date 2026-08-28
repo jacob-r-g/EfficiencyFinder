@@ -20,6 +20,7 @@ export default function App() {
     "Select a reference FASTA and one or more FASTQ files, then click Run analysis.",
   );
   const [result, setResult] = useState<BatchResult | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function run() {
@@ -27,6 +28,7 @@ export default function App() {
     setRunning(true);
     setError(null);
     setResult(null);
+    setJobId(null);
     setProgressValue(null);
     setProgressMax(null);
     try {
@@ -77,6 +79,7 @@ export default function App() {
         return;
       }
       const batch = await getResults(done.id);
+      setJobId(done.id);
       setResult(batch);
       setProgressValue(null);
       setProgressMax(null);
@@ -143,7 +146,7 @@ export default function App() {
           )}
           <p className="status">{status}</p>
           {error && <pre className="error">{error}</pre>}
-          <ResultsView result={result} />
+          <ResultsView result={result} jobId={jobId} />
         </>
       )}
     </>

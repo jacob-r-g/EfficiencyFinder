@@ -1,6 +1,7 @@
 import { useState } from "react";
 import DataTable from "./DataTable";
 import IndelHistogram from "./IndelHistogram";
+import { unassignedDownloadUrl } from "./api";
 import type { BatchResult } from "./types";
 
 const ASSIGNMENT_SAMPLE = [
@@ -40,9 +41,9 @@ function hasReads(row: Record<string, unknown>, key: string): boolean {
   return typeof n === "number" ? n > 0 : Number(n) > 0;
 }
 
-type Props = { result: BatchResult | null };
+type Props = { result: BatchResult | null; jobId: string | null };
 
-export default function ResultsView({ result }: Props) {
+export default function ResultsView({ result, jobId }: Props) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Assignment");
   const [alleleTab, setAlleleTab] = useState<"sample" | "shared">("sample");
   const [hideZeros, setHideZeros] = useState(true);
@@ -71,6 +72,7 @@ export default function ResultsView({ result }: Props) {
     : result.amplicon_assignments ?? [];
   const sampleRows = result.samples.map((s) => ({ ...s, sample: s.sample_name }));
   const anyUnassigned = result.samples.some((s) => s.n_unassigned > 0);
+  const unassignedExports = result.unassigned_exports ?? [];
 
   const details = result.allele_details.filter(
     (d) =>
@@ -132,6 +134,20 @@ export default function ResultsView({ result }: Props) {
               you see a gel band, check for non-specific amplification in the unassigned
               pool.
             </p>
+          )}
+          {jobId && unassignedExports.length > 0 && (
+            <div className="export-row">
+              {unassignedExports.map((exp) => (
+                <a
+                  key={exp.sample_name}
+                  className="button-link"
+                  href={unassignedDownloadUrl(jobId, exp.sample_name)}
+                  download={exp.filename}
+                >
+                  Download unassigned FASTQ — {exp.sample_name} ({exp.n_reads.toLocaleString()} reads)
+                </a>
+              ))}
+            </div>
           )}
           <DataTable
             columns={ASSIGNMENT_SAMPLE}

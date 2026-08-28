@@ -64,6 +64,10 @@ export async function getResults(jobId: string): Promise<BatchResult> {
   return res.json();
 }
 
+export function unassignedDownloadUrl(jobId: string, sampleName: string): string {
+  return `/api/jobs/${encodeURIComponent(jobId)}/unassigned/${encodeURIComponent(sampleName)}`;
+}
+
 export async function pollJob(
   jobId: string,
   onProgress: (status: JobStatus) => void,
