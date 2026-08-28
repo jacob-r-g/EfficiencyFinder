@@ -80,6 +80,16 @@ export default function DocsPanel() {
           what fraction of the sample’s total reads that is.
         </Term>
       </dl>
+      <p>
+        When a sample has unassigned reads, use <strong>Download unassigned FASTQ</strong> on
+        the Assignment tab to export those sequences for BLAST or manual inspection (e.g.
+        identifying a second PCR band).
+      </p>
+      <p>
+        On amplicons with two guides where only one is active in your line, editing at
+        the other guide is often <code>edited_deletion_large</code> from a real edit at
+        the active guide — not independent off-target cutting.
+      </p>
 
       <h2>Efficiency tab</h2>
       <p>

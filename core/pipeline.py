@@ -126,6 +126,7 @@ class SampleResult:
     n_assigned: int
     n_unassigned: int
     amp_read_counts: dict[str, int]
+    unassigned_reads: list[tuple[str, str]]
     efficiencies: list[GuideEfficiency]
     indel_summaries: list[IndelSummary]
     allele_summaries: list[AlleleSummary]
@@ -324,6 +325,9 @@ def run_single_sample(
     amp_read_counts = Counter(cr.amplicon for cr in classified if cr.amplicon is not None)
     n_assigned = sum(amp_read_counts.values())
     n_unassigned = sum(1 for cr in classified if cr.amplicon is None)
+    unassigned_reads = [
+        (cr.read_id, cr.seq) for cr in classified if cr.amplicon is None
+    ]
 
     stage(3)
     calls = call_editing_status(
@@ -356,6 +360,7 @@ def run_single_sample(
         n_assigned=n_assigned,
         n_unassigned=n_unassigned,
         amp_read_counts=dict(amp_read_counts),
+        unassigned_reads=unassigned_reads,
         efficiencies=efficiencies,
         indel_summaries=indel_summaries,
         allele_summaries=allele_summaries,

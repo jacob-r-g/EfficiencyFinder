@@ -5,7 +5,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from tests.helpers import AMP1, GUIDE1_NAME, GUIDE1_START, valid_single_guide_fasta, write_fastq
+from core.parsing import parse_fastq
+from tests.helpers import AMP1, GUIDE1_NAME, GUIDE1_START, random_dna, valid_single_guide_fasta, write_fastq
 from web.backend.app import create_app
 from web.backend.store import Store
 
@@ -106,3 +107,45 @@ class TestJobPipelineApi(unittest.TestCase):
         self.assertEqual(eff["wt_unedited"], 2)
         self.assertEqual(eff["edited_deletion_small"], 2)
         self.assertEqual(eff["pct_editing"], 50.0)
+
+    def test_download_unassigned_fastq(self):
+        junk = random_dna(len(AMP1), seed=7)
+        scratch = Path(self._td.name) / "scratch2"
+        scratch.mkdir()
+        fa = valid_single_guide_fasta(scratch / "ref.fa")
+        fq = write_fastq(
+            scratch / "mix.fastq",
+            [("wt", AMP1), ("junk", junk)],
+        )
+        uid = self.client.post("/api/uploads").json()["upload_id"]
+        self.client.put(
+            f"/api/uploads/{uid}/files/ref.fa?chunk=0&chunks=1",
+            content=fa.read_bytes(),
+        )
+        self.client.put(
+            f"/api/uploads/{uid}/files/mix.fastq?chunk=0&chunks=1",
+            content=fq.read_bytes(),
+        )
+        job_id = self.client.post(
+            "/api/jobs",
+            json={
+                "upload_id": uid,
+                "fasta": "ref.fa",
+                "fastqs": ["mix.fastq"],
+            },
+        ).json()["id"]
+        status = _wait_status(self.client, job_id, timeout=10)
+        self.assertEqual(status["status"], "done", status)
+        results = self.client.get(f"/api/jobs/{job_id}/results").json()
+        self.assertEqual(results["samples"][0]["n_unassigned"], 1)
+        exports = results["unassigned_exports"]
+        self.assertEqual(len(exports), 1)
+        self.assertEqual(exports[0]["n_reads"], 1)
+        res = self.client.get(f"/api/jobs/{job_id}/unassigned/mix")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("application/x-fastq", res.headers.get("content-type", ""))
+        with tempfile.NamedTemporaryFile(suffix=".fq") as tmp:
+            tmp.write(res.content)
+            tmp.flush()
+            reads = parse_fastq(tmp.name)
+        self.assertEqual(reads, [("junk", junk)])

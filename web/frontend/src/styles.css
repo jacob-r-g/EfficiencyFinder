@@ -120,6 +120,28 @@ button:disabled {
   margin: 0 0 8px;
 }
 
+.export-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.button-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border: 1px solid #1f6feb;
+  border-radius: 6px;
+  color: #1f6feb;
+  text-decoration: none;
+  background: #f0f6ff;
+}
+
+.button-link:hover {
+  background: #dbeafe;
+}
+
 .file-list {
   list-style: none;
   margin: 0 0 8px;

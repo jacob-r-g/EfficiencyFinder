@@ -166,6 +166,8 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(batch.samples[0].n_reads, 3)
             self.assertEqual(batch.samples[0].n_assigned, 2)
             self.assertEqual(batch.samples[0].n_unassigned, 1)
+            self.assertEqual(len(batch.samples[0].unassigned_reads), 1)
+            self.assertEqual(batch.samples[0].unassigned_reads[0][0], "junk")
             self.assertEqual(len(batch.amplicon_assignments), 1)
             row = batch.amplicon_assignments[0]
             self.assertEqual(row.amplicon, AMP1_NAME)

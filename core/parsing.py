@@ -78,6 +78,13 @@ def parse_fastq(path: str) -> list[tuple[str, str]]:
     return reads
 
 
+def write_fastq(path: str, reads: list[tuple[str, str]]) -> None:
+    """Write reads as a minimal FASTQ (dummy quality)."""
+    with open(path, "w", encoding="utf-8") as f:
+        for read_id, seq in reads:
+            f.write(f"@{read_id}\n{seq}\n+\n{'I' * len(seq)}\n")
+
+
 # SpCas9: NGG PAM is 3 bp; cut is 3 bp upstream of the PAM (between spacer nt 17–18).
 PAM_LEN = 3
 

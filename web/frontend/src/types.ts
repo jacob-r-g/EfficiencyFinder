@@ -57,6 +57,12 @@ export type SampleCounts = {
   pct_assigned: number | null;
 };
 
+export type UnassignedExport = {
+  sample_name: string;
+  n_reads: number;
+  filename: string;
+};
+
 export type IndelSizeObservation = {
   sample: string;
   guide: string;
@@ -65,6 +71,7 @@ export type IndelSizeObservation = {
 
 export type BatchResult = {
   samples: SampleCounts[];
+  unassigned_exports: UnassignedExport[];
   amplicon_assignments: Record<string, unknown>[];
   efficiencies: Record<string, unknown>[];
   indel_summaries: Record<string, unknown>[];

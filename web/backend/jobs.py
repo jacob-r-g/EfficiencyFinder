@@ -14,8 +14,10 @@ from web.backend.serialize import jsonable
 from web.backend.settings_body import settings_from_dict
 from web.backend.store import Store, StoreError, safe_filename
 
+from web.backend.unassigned_export import write_unassigned_exports
+
 ProgressFn = Callable[..., None]
-AnalyzeFn = Callable[[Path, list[Path], Any, ProgressFn], dict]
+AnalyzeFn = Callable[..., dict]
 
 
 @dataclass
@@ -43,7 +45,11 @@ def public_status(state: JobState) -> dict:
 
 
 def default_analyze(
-    fasta: Path, fastqs: list[Path], settings, on_progress: ProgressFn
+    fasta: Path,
+    fastqs: list[Path],
+    settings,
+    on_progress: ProgressFn,
+    job_dir: Path | None = None,
 ) -> dict:
     n = max(len(fastqs), 1)
     on_progress(0, n, "", stage="Loading reference", stage_i=0, stage_n=1)
@@ -54,6 +60,11 @@ def default_analyze(
         settings,
         progress_callback=on_progress,
     )
+    unassigned_exports: list[dict] = []
+    if job_dir is not None:
+        unassigned_exports = write_unassigned_exports(
+            batch.samples, job_dir / "exports"
+        )
     data = jsonable(batch)
     data["samples"] = [
         {
@@ -67,6 +78,7 @@ def default_analyze(
         }
         for s in batch.samples
     ]
+    data["unassigned_exports"] = unassigned_exports
     return data
 
 
@@ -163,7 +175,9 @@ class JobManager:
                     combined = fasta.parent / "combined.fastq"
                     combine_fastq_files(fastqs, combined)
                     fastqs = [combined]
-                results = self.analyze(fasta, fastqs, settings, on_progress)
+                results = self.analyze(
+                    fasta, fastqs, settings, on_progress, self.store.job_path(job_id)
+                )
                 with self._lock:
                     state.results = results
                     state.status = "done"
