@@ -15,6 +15,14 @@ class TestSettingsFromDict(unittest.TestCase):
         self.assertEqual(s.min_excision_fraction, 0.5)
         self.assertEqual(s.flank, PipelineSettings().flank)
 
+    def test_nuclease_normalized(self):
+        s = settings_from_dict({"nuclease": "Cas12a"})
+        self.assertEqual(s.nuclease, "cas12")
+
+    def test_rejects_unknown_nuclease(self):
+        with self.assertRaises(SettingsError):
+            settings_from_dict({"nuclease": "cas13"})
+
     def test_rejects_unknown_fields(self):
         with self.assertRaises(SettingsError):
             settings_from_dict({"nope": 1})

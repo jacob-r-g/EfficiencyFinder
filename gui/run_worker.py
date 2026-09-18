@@ -31,7 +31,11 @@ class RunWorker(QThread):
 
     def run(self) -> None:
         try:
-            ref_set = load_reference_set(self._fasta_path, flank=self._settings.flank)
+            ref_set = load_reference_set(
+                self._fasta_path,
+                flank=self._settings.flank,
+                nuclease=self._settings.nuclease,
+            )
         except FastaValidationError as exc:
             self.failed.emit(str(exc), "", True)
             return
