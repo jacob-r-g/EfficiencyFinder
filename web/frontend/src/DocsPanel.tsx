@@ -43,8 +43,9 @@ export default function DocsPanel() {
         <li>
           <strong>Guide</strong> headers must contain <code>_G</code>, and the text
           before the first <code>_G</code> must match the amplicon name exactly (case
-          and spaces). Sequence = protospacer+PAM; must be an exact substring of that
-          amplicon on either strand.
+          and spaces). Sequence must be an exact substring of that amplicon on either
+          strand: SpCas9 = protospacer+NGG; Cas12a = 4 bp PAM + spacer. Select the
+          matching nuclease before running (default SpCas9).
         </li>
         <li>An amplicon may have 0, 1, or several guides. Empty guide sequences are skipped.</li>
       </ul>
@@ -87,9 +88,9 @@ export default function DocsPanel() {
       </p>
       <p>
         On amplicons with two guides where only one is active in your line, editing at
-        the other guide is scored only at the Cas9 cut window (3 bp up + 3 bp down).
-        Distal nanopore ±1 noise usually stays WT; missing flanks are inconclusive,
-        not counted as editing.
+        the other guide is scored only in the nuclease WT window (Cas9: 3 bp up + 3 bp
+        down of the cut; Cas12: spacer 16–23). Distal nanopore ±1 noise usually stays
+        WT; missing flanks are inconclusive, not counted as editing.
       </p>
 
       <h2>Efficiency tab</h2>
@@ -106,11 +107,11 @@ export default function DocsPanel() {
         <strong>Call rules (cut-local WT).</strong> Match left and right flanks around
         the guide. If either flank fails → <code>inconclusive</code> (cannot place the
         cut; excluded from <code>pct_editing</code>). If both flanks match: require the
-        exact 6 bp window at the SpCas9 cut (3 bp upstream + 3 bp downstream) to match
-        the reference → <code>WT_intact</code>. Distal spacer length noise (e.g. ±1 bp
-        in a homopolymer away from the junction) does <em>not</em> count as editing.
-        If that cut window is disrupted, classify by gap length as insertion, small
-        deletion, or substitution.
+        nuclease WT window to match the reference exactly → <code>WT_intact</code>.
+        SpCas9 uses 3 bp upstream + 3 bp downstream of the blunt cut; Cas12a uses
+        spacer positions 16–23. Distal spacer length noise outside that window does{" "}
+        <em>not</em> count as editing. If the WT window is disrupted, classify by gap
+        length as insertion, small deletion, or substitution.
       </p>
       <dl>
         <Term name="total_amplicon_reads">
@@ -131,10 +132,10 @@ export default function DocsPanel() {
           dropouts; paired-excision uses this co-occurrence across guides.
         </Term>
         <Term name="wt_unedited">
-          Both flanks match and the 6 bp cut window is letter-identical to WT.
+          Both flanks match and the nuclease WT window is letter-identical to WT.
         </Term>
         <Term name="edited">
-          Conclusive calls that are not WT (cut window disrupted).
+          Conclusive calls that are not WT (WT window disrupted).
         </Term>
         <Term name="edited_insertion">
           Cut window disrupted; observed flank-to-flank gap longer than the WT target.
@@ -259,6 +260,11 @@ export default function DocsPanel() {
 
       <h2>UI options</h2>
       <dl>
+        <Term name="Nuclease">
+          SpCas9 (default) or Cas12a/Cpf1. Controls PAM/cut geometry and the WT
+          window used for efficiency calling. Must match how guides are written in
+          the FASTA.
+        </Term>
         <Term name="Combine FASTQs into one sample">
           Concatenate all uploaded FASTQs and analyze as a single sample (e.g. one plant
           split across multiplex reactions with one shared FASTA).

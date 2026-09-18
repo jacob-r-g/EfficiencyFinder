@@ -5,7 +5,7 @@ Desktop app for CRISPR editing efficiency from nanopore amplicon FASTQ. Fully of
 It reports, per sample:
 
 - Read classification to amplicon (assigned vs unassigned)
-- WT vs edited at each Cas9 cut (3 bp up + 3 bp down of the cut must match for WT)
+- WT vs edited at each guide cut (Cas9: 3 bp up + 3 bp down; Cas12: spacer 16–23)
 - Indel size and in-frame vs frameshift
 - Distinct alleles (for chimerism)
 - Paired-guide excision (both cuts at once, intervening fragment dropped)
@@ -70,7 +70,10 @@ CCACTTCGGCTAGCCGAATGGGA
 
 - Amplicon headers must **not** contain `_G`. Sequence is the full WT amplicon.
 - Guide headers **must** contain `_G`, and the text before the first `_G` must match the amplicon header exactly (including case and spaces).
-- Guide sequence is the protospacer+PAM and must be an exact substring of that amplicon on either strand.
+- Guide sequence must be an exact substring of that amplicon on either strand:
+  - **SpCas9:** protospacer + NGG PAM
+  - **Cas12a:** 4 bp PAM (TTTV) + spacer
+- Choose the matching nuclease in the UI (default SpCas9). The WT window is cut-local: Cas9 = 3 bp up + 3 bp down of the blunt cut; Cas12 = spacer positions 16–23.
 - An amplicon can have 0, 1, or several guides. Empty guide sequences are skipped.
 
 Example files are in `sample files/`.
@@ -82,7 +85,7 @@ Tabs, all sortable/filterable and exportable to CSV:
 | Tab | What it shows |
 |---|---|
 | **Assignment** | Per-sample assigned vs unassigned reads; per-amplicon counts; download unassigned FASTQ |
-| **Efficiency** | Per-guide cut-local WT vs edited % (WT = exact 6 bp at the Cas9 cut; distal spacer noise ignored; failed flanks = inconclusive) |
+| **Efficiency** | Per-guide cut-local WT vs edited % (Cas9: 6 bp at cut; Cas12: spacer 16–23; distal spacer noise ignored; failed flanks = inconclusive) |
 | **Indel & Frame** | Net indel size at the guide window, in-frame vs frameshift. Substitutions are WT here. Per-guide histogram. |
 | **Alleles** | Distinct edit outcomes per sample, plus alleles shared across the batch |
 | **Paired excision** | For amplicons with 2+ guides: reads with failed local flanks at every guide, with confirmed outer-flank dropout size |
