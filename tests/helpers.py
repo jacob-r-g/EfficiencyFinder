@@ -11,9 +11,13 @@ def random_dna(n: int, seed: int) -> str:
     return "".join(rng.choice("ACGT") for _ in range(n))
 
 
-# 23 bp protospacer+PAM (example from the build spec)
+# SpCas9: 23 bp protospacer+PAM (example from the build spec)
 GUIDE1 = "CCACTTCGGCTAGCCGAATGGGA"
 GUIDE2 = "GATTACAACGTACGTACGTACGG"
+
+# Cas12a: 4 bp PAM (TTTA) + 23 bp spacer = 27 bp
+CAS12_GUIDE1 = "TTTA" + "CCACTTCGGCTAGCCGAATGGAT"
+CAS12_GUIDE2 = "TTTG" + "GATTACAACGTACGTACGTACTA"
 
 LEFT = random_dna(200, seed=1)
 MID = random_dna(80, seed=2)
@@ -25,6 +29,13 @@ AMP1_NAME = "Amp1"
 GUIDE1_NAME = "Amp1_G1"
 GUIDE1_START = 200
 GUIDE1_END = 223
+
+# Cas12 Amp1
+CAS12_AMP1 = LEFT + CAS12_GUIDE1 + RIGHT
+CAS12_AMP1_NAME = "Cas12Amp1"
+CAS12_GUIDE1_NAME = "Cas12Amp1_G1"
+CAS12_GUIDE1_START = 200
+CAS12_GUIDE1_END = 227
 
 # Amp2: two guides, used for paired-guide / N-guide tests
 AMP2 = LEFT + GUIDE1 + MID + GUIDE2 + RIGHT
@@ -57,6 +68,12 @@ def write_fastq(path: Path, reads: list[tuple[str, str]]) -> Path:
 
 def valid_single_guide_fasta(path: Path) -> Path:
     return write_fasta(path, {AMP1_NAME: AMP1, GUIDE1_NAME: GUIDE1})
+
+
+def valid_cas12_single_guide_fasta(path: Path) -> Path:
+    return write_fasta(
+        path, {CAS12_AMP1_NAME: CAS12_AMP1, CAS12_GUIDE1_NAME: CAS12_GUIDE1}
+    )
 
 
 def valid_two_guide_fasta(path: Path) -> Path:

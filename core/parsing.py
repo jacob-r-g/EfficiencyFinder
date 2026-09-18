@@ -86,6 +86,7 @@ def write_fastq(path: str, reads: list[tuple[str, str]]) -> None:
 
 
 # SpCas9: NGG PAM is 3 bp; cut is 3 bp upstream of the PAM (between spacer nt 17–18).
+# Cas12a geometry lives in core.nuclease (PAM 4 bp + staggered cuts).
 PAM_LEN = 3
 
 
@@ -98,7 +99,9 @@ class GuideInfo:
     target_end: int
     left_flank: str
     right_flank: str
-    cut_pos: int  # 0-based amplicon index of the Cas9 cut (between cut_pos-1 and cut_pos)
+    cut_pos: int  # 0-based amplicon index of the guide-strand cut (between cut_pos-1 and cut_pos)
+    wt_start: int  # half-open [wt_start, wt_end) window that must match for WT
+    wt_end: int
     strand: str  # "+" if guide matches the amplicon forward strand, else "-"
 
 
@@ -107,10 +110,16 @@ class ReferenceSet:
     amplicons: dict[str, str]
     guides: dict[str, GuideInfo]
     guides_by_amplicon: dict[str, list[str]]
+    nuclease: str = "cas9"
 
 
-def load_reference_set(fasta_path: str, flank: int = 25) -> ReferenceSet:
+def load_reference_set(
+    fasta_path: str, flank: int = 25, nuclease: str = "cas9"
+) -> ReferenceSet:
     """Parse and validate the combined amplicon+guide FASTA."""
+    from .nuclease import guide_geometry, normalize_nuclease
+
+    nuclease = normalize_nuclease(nuclease)
     entries = parse_fasta(fasta_path)
     if not entries:
         raise FastaValidationError(f"No FASTA records found in '{fasta_path}'.")
@@ -141,23 +150,26 @@ def load_reference_set(fasta_path: str, flank: int = 25) -> ReferenceSet:
         if pos >= 0:
             target_seq = gseq
             strand = "+"
-            # PAM at 3' end of guide; cut 3 bp upstream of PAM.
-            spacer_len = max(0, len(gseq) - PAM_LEN)
-            cut_pos = pos + max(0, spacer_len - PAM_LEN)
         else:
             pos = amp.find(revcomp(gseq))
             if pos < 0:
                 raise FastaValidationError(
                     f"Guide '{gname}' ({gseq}) was not found in amplicon '{ampname}' "
                     f"on either strand. Check that the guide sequence is an exact "
-                    f"substring of the amplicon (protospacer+PAM, typically 23bp)."
+                    f"substring of the amplicon (Cas9: protospacer+PAM; "
+                    f"Cas12: 4 bp PAM + spacer)."
                 )
             target_seq = amp[pos : pos + len(gseq)]
             strand = "-"
-            # On the reverse strand PAM sits at the 5' end of the forward window;
-            # cut is 3 bp upstream of PAM toward the spacer (= forward +6 for 23 bp).
-            spacer_len = max(0, len(gseq) - PAM_LEN)
-            cut_pos = pos + len(gseq) - max(0, spacer_len - PAM_LEN)
+
+        cut_pos, wt_start, wt_end = guide_geometry(
+            nuclease=nuclease, pos=pos, guide_len=len(gseq), strand=strand
+        )
+        if wt_start < 0 or wt_end > len(amp) or wt_start >= wt_end:
+            raise FastaValidationError(
+                f"Guide '{gname}' WT window [{wt_start}, {wt_end}) is outside "
+                f"amplicon '{ampname}' (len {len(amp)}) for nuclease={nuclease}."
+            )
 
         gi = GuideInfo(
             name=gname,
@@ -168,11 +180,16 @@ def load_reference_set(fasta_path: str, flank: int = 25) -> ReferenceSet:
             left_flank=amp[max(0, pos - flank) : pos],
             right_flank=amp[pos + len(target_seq) : pos + len(target_seq) + flank],
             cut_pos=cut_pos,
+            wt_start=wt_start,
+            wt_end=wt_end,
             strand=strand,
         )
         guides[gname] = gi
         guides_by_amplicon[ampname].append(gname)
 
     return ReferenceSet(
-        amplicons=amplicons, guides=guides, guides_by_amplicon=guides_by_amplicon
+        amplicons=amplicons,
+        guides=guides,
+        guides_by_amplicon=guides_by_amplicon,
+        nuclease=nuclease,
     )
