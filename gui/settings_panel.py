@@ -2,6 +2,7 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QFrame,
@@ -159,6 +160,15 @@ class SettingsPanel(QWidget):
         self._toggle.setStyleSheet("QToolButton { border: none; font-weight: 600; }")
         self._toggle.toggled.connect(self._on_toggled)
 
+        self._nuclease = QComboBox()
+        self._nuclease.addItem("SpCas9 (NGG)", "cas9")
+        self._nuclease.addItem("Cas12a / Cpf1 (TTTV)", "cas12")
+        self._nuclease.setToolTip(
+            "Cas9: guide = spacer+NGG; WT = cut ±3 bp. "
+            "Cas12: guide = 4 bp PAM + spacer; WT = spacer positions 16–23."
+        )
+        self._nuclease.setCurrentIndex(0)
+
         self._body = QFrame()
         self._body.setVisible(False)
         self._body.setFrameShape(QFrame.Shape.StyledPanel)
@@ -190,6 +200,7 @@ class SettingsPanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._nuclease)
         layout.addWidget(self._toggle)
         layout.addWidget(self._body)
 
@@ -200,7 +211,7 @@ class SettingsPanel(QWidget):
         )
 
     def settings(self) -> PipelineSettings:
-        vals = {}
+        vals = {"nuclease": self._nuclease.currentData()}
         for attr, w in self._widgets.items():
             vals[attr] = w.value()
         return PipelineSettings(**vals)

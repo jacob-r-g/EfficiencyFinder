@@ -131,9 +131,11 @@ export default function App() {
             fastqs={fastqs}
             running={running}
             combineFastqs={combineFastqs}
+            nuclease={settings.nuclease}
             onFasta={setFasta}
             onFastqs={setFastqs}
             onCombineFastqs={setCombineFastqs}
+            onNuclease={(nuclease) => setSettings((s) => ({ ...s, nuclease }))}
             onRun={run}
           />
           <SettingsPanel value={settings} disabled={running} onChange={setSettings} />
