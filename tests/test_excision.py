@@ -4,8 +4,8 @@ from pathlib import Path
 
 from core.classify import ClassifiedRead
 from core.editing import (
-    STATUS_DEL_LARGE,
     STATUS_DEL_SMALL,
+    STATUS_INCONCLUSIVE,
     STATUS_WT,
     call_editing_status,
 )
@@ -65,8 +65,8 @@ class TestPairedExcision(unittest.TestCase):
             self.settings,
         )
         by_guide = {c.guide: c.status for c in calls}
-        self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_DEL_LARGE)
-        self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_DEL_LARGE)
+        self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_INCONCLUSIVE)
+        self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_INCONCLUSIVE)
 
         summaries, sizes = call_paired_excisions(
             [cr], calls, self.ref.guides, self.ref.guides_by_amplicon, self.settings, "s"
@@ -87,8 +87,9 @@ class TestPairedExcision(unittest.TestCase):
         self.assertEqual(sizes[0].n_reads, 1)
 
     def test_single_guide_small_indel_is_not_paired_excision(self):
-        # Independent 5 bp deletion at guide 1 only; guide 2 remains WT.
-        read = AMP2[: GUIDE1_START + 4] + AMP2[GUIDE1_START + 9 :]
+        # Independent 5 bp deletion across guide-1 cut; guide 2 remains WT.
+        cut = GUIDE1_START + 17
+        read = AMP2[: cut - 2] + AMP2[cut + 3 :]
         cr = ClassifiedRead("one", read, AMP2_NAME, "+", 100, 0)
         calls = call_editing_status(
             [cr],

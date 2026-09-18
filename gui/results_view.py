@@ -31,6 +31,7 @@ EFFICIENCY_COLS = [
     ("total_amplicon_reads", "total_amplicon_reads"),
     ("reads_spanning_target", "reads_spanning_target"),
     ("not_sequenced", "not_sequenced"),
+    ("inconclusive", "inconclusive"),
     ("wt_unedited", "wt_unedited"),
     ("edited", "edited"),
     ("edited_insertion", "edited_insertion"),

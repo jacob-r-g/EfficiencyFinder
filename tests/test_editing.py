@@ -4,8 +4,8 @@ from pathlib import Path
 
 from core.classify import ClassifiedRead
 from core.editing import (
-    STATUS_DEL_LARGE,
     STATUS_DEL_SMALL,
+    STATUS_INCONCLUSIVE,
     STATUS_INSERTION,
     STATUS_NOT_SEQUENCED,
     STATUS_SUBSTITUTION,
@@ -29,6 +29,9 @@ from tests.helpers import (
     valid_single_guide_fasta,
     valid_two_guide_fasta,
 )
+
+# SpCas9 cut is 3 bp upstream of PAM → index start+17 for a 23 bp NGG guide.
+GUIDE1_CUT = GUIDE1_START + 17
 
 
 def _wt_read(read_id="wt"):
@@ -57,28 +60,35 @@ class TestCallEditingStatus(unittest.TestCase):
         self.assertEqual(calls[0].status, STATUS_WT)
         self.assertEqual(calls[0].guide, GUIDE1_NAME)
 
-    def test_small_deletion(self):
-        read = AMP1[: GUIDE1_START + 4] + AMP1[GUIDE1_START + 9 :]  # 5 bp del in target
+    def test_distal_spacer_indel_still_wt(self):
+        """±1 far from the cut (still in spacer) must not count as edited."""
+        # Delete 1 bp near the 5' end of the spacer; cut window stays intact.
+        read = AMP1[: GUIDE1_START + 2] + AMP1[GUIDE1_START + 3 :]
+        cr = ClassifiedRead("distal", read, AMP1_NAME, "+", 100, 0)
+        self.assertEqual(self._call([cr])[0].status, STATUS_WT)
+
+    def test_small_deletion_at_cut(self):
+        read = AMP1[: GUIDE1_CUT - 2] + AMP1[GUIDE1_CUT + 3 :]  # 5 bp across cut
         cr = ClassifiedRead("d", read, AMP1_NAME, "+", 100, 0)
         self.assertEqual(self._call([cr])[0].status, STATUS_DEL_SMALL)
 
-    def test_insertion(self):
-        read = AMP1[:GUIDE1_START] + "AAAAA" + AMP1[GUIDE1_START:]
+    def test_insertion_at_cut(self):
+        read = AMP1[:GUIDE1_CUT] + "AAAAA" + AMP1[GUIDE1_CUT:]
         cr = ClassifiedRead("i", read, AMP1_NAME, "+", 100, 0)
         self.assertEqual(self._call([cr])[0].status, STATUS_INSERTION)
 
-    def test_substitution(self):
+    def test_substitution_in_cut_window(self):
         chars = list(AMP1)
-        for i in range(GUIDE1_START, GUIDE1_START + 5):
+        for i in range(GUIDE1_CUT - 3, GUIDE1_CUT + 3):
             chars[i] = "A" if AMP1[i] != "A" else "C"
         read = "".join(chars)
         cr = ClassifiedRead("s", read, AMP1_NAME, "+", 100, 0)
         self.assertEqual(self._call([cr])[0].status, STATUS_SUBSTITUTION)
 
-    def test_large_deletion_eating_flanks(self):
+    def test_missing_flanks_inconclusive(self):
         read = AMP1[: GUIDE1_START - 10] + AMP1[GUIDE1_END + 10 :]
         cr = ClassifiedRead("L", read, AMP1_NAME, "+", 100, 0)
-        self.assertEqual(self._call([cr])[0].status, STATUS_DEL_LARGE)
+        self.assertEqual(self._call([cr])[0].status, STATUS_INCONCLUSIVE)
 
     def test_not_sequenced_without_coverage(self):
         short = AMP1[:80]
@@ -91,14 +101,14 @@ class TestCallEditingStatus(unittest.TestCase):
             fa = valid_two_guide_fasta(Path(td) / "ref.fa")
             ref = load_reference_set(str(fa), flank=25)
         # Covers LEFT + GUIDE1 only — enough for guide A locus, not guide B.
-        # Right flank of A is missing, so A is large-del rather than WT.
+        # Right flank of A is missing → inconclusive at A.
         read = LEFT + GUIDE1
         cr = ClassifiedRead("short", read, AMP2_NAME, "+", 100, 0)
         calls = call_editing_status(
             [cr], ref.amplicons, ref.guides, ref.guides_by_amplicon
         )
         by_guide = {c.guide: c.status for c in calls}
-        self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_DEL_LARGE)
+        self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_INCONCLUSIVE)
         self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_NOT_SEQUENCED)
 
     def test_short_read_can_still_call_wt_on_single_guide(self):
@@ -107,8 +117,8 @@ class TestCallEditingStatus(unittest.TestCase):
         cr = ClassifiedRead("span", read, AMP1_NAME, "+", 100, 0)
         self.assertEqual(self._call([cr])[0].status, STATUS_WT)
 
-    def test_paired_excision_read_still_large_del_both_guides(self):
-        """Inter-guide dropout must not be discarded as not_sequenced."""
+    def test_paired_excision_read_inconclusive_both_guides(self):
+        """Inter-guide dropout: both guides inconclusive (not discarded as not_sequenced)."""
         with tempfile.TemporaryDirectory() as td:
             fa = valid_two_guide_fasta(Path(td) / "ref.fa")
             ref = load_reference_set(str(fa), flank=25)
@@ -117,8 +127,8 @@ class TestCallEditingStatus(unittest.TestCase):
             [cr], ref.amplicons, ref.guides, ref.guides_by_amplicon
         )
         by_guide = {c.guide: c.status for c in calls}
-        self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_DEL_LARGE)
-        self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_DEL_LARGE)
+        self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_INCONCLUSIVE)
+        self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_INCONCLUSIVE)
 
     def test_unassigned_read_skipped(self):
         cr = ClassifiedRead("u", AMP1, None, "+", 0, 0)
@@ -130,7 +140,7 @@ class TestCallEditingStatus(unittest.TestCase):
             _wt_read("w2"),
             ClassifiedRead(
                 "d",
-                AMP1[: GUIDE1_START + 4] + AMP1[GUIDE1_START + 9 :],
+                AMP1[: GUIDE1_CUT - 2] + AMP1[GUIDE1_CUT + 3 :],
                 AMP1_NAME,
                 "+",
                 100,
@@ -147,7 +157,30 @@ class TestCallEditingStatus(unittest.TestCase):
         self.assertEqual(row.wt_unedited, 2)
         self.assertEqual(row.edited, 1)
         self.assertEqual(row.edited_deletion_small, 1)
+        self.assertEqual(row.inconclusive, 0)
         self.assertEqual(row.pct_editing, 33.3)
+
+    def test_inconclusive_excluded_from_pct(self):
+        reads = [
+            _wt_read("w1"),
+            ClassifiedRead(
+                "L",
+                AMP1[: GUIDE1_START - 10] + AMP1[GUIDE1_END + 10 :],
+                AMP1_NAME,
+                "+",
+                100,
+                0,
+            ),
+        ]
+        calls = self._call(reads)
+        row = summarize_efficiency(
+            calls, self.ref.guides, {AMP1_NAME: 2}, sample="x"
+        )[0]
+        self.assertEqual(row.wt_unedited, 1)
+        self.assertEqual(row.inconclusive, 1)
+        self.assertEqual(row.edited, 0)
+        self.assertEqual(row.reads_spanning_target, 1)
+        self.assertEqual(row.pct_editing, 0.0)
 
 
 if __name__ == "__main__":

@@ -72,7 +72,8 @@ class TestJobPipelineApi(unittest.TestCase):
         self._td.cleanup()
 
     def test_end_to_end_editing_counts(self):
-        deleted = AMP1[: GUIDE1_START + 4] + AMP1[GUIDE1_START + 9 :]
+        cut = GUIDE1_START + 17
+        deleted = AMP1[: cut - 2] + AMP1[cut + 3 :]
         scratch = Path(self._td.name) / "scratch"
         scratch.mkdir()
         fa = valid_single_guide_fasta(scratch / "ref.fa")

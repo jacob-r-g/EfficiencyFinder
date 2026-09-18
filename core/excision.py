@@ -3,7 +3,7 @@
 When two (or more) guides cut the same amplicon in one cell, NHEJ can join the
 outer ends and drop the entire intervening fragment. On a spanning read that is
 *not* two independent small indels, each guide's near-flanks fail to match, so
-every guide is called edited_deletion_large — the co-occurrence signature.
+every guide is called inconclusive — the co-occurrence signature.
 
 A confirmed excision additionally matches the leftmost left-flank to the
 rightmost right-flank and finds a dropout spanning most of the expected
@@ -16,9 +16,13 @@ from dataclasses import dataclass
 from math import nan
 from statistics import median
 
-from .editing import STATUS_DEL_LARGE, STATUS_NOT_SEQUENCED
+from .editing import STATUS_DEL_LARGE, STATUS_INCONCLUSIVE, STATUS_NOT_SEQUENCED
 from .matching import find_best_match
 from .settings import PipelineSettings
+
+# Co-occurrence signature for paired excision: local flanks failed at every guide
+# (inconclusive) or legacy large-del calls.
+_FLANK_FAIL_STATUSES = frozenset({STATUS_INCONCLUSIVE, STATUS_DEL_LARGE})
 
 
 @dataclass
@@ -89,9 +93,10 @@ def call_paired_excisions(
     """Detect paired/multi-guide excision events per amplicon.
 
     An amplicon is only considered if it has 2+ guides. A spanning read is a
-    paired-excision candidate when *every* guide on that amplicon is
-    edited_deletion_large. Confirmation requires an outer-flank dropout of at
-    least max(min_excision_bp, expected_cut_to_cut * min_excision_fraction).
+    paired-excision candidate when *every* guide on that amplicon has failed
+    local flank placement (inconclusive / large-del). Confirmation requires an
+    outer-flank dropout of at least
+    max(min_excision_bp, expected_cut_to_cut * min_excision_fraction).
     Expected dropout is the distance between SpCas9 cut sites (3 bp upstream
     of each NGG PAM), not the full guide-span.
     """
@@ -138,7 +143,7 @@ def call_paired_excisions(
             if any(gst.get(g) == STATUS_NOT_SEQUENCED for g in ordered):
                 continue
             spanning += 1
-            if not all(gst.get(g) == STATUS_DEL_LARGE for g in ordered):
+            if not all(gst.get(g) in _FLANK_FAIL_STATUSES for g in ordered):
                 continue
             both_large += 1
             dropout = _measure_dropout(

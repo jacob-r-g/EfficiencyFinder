@@ -25,7 +25,8 @@ from tests.helpers import (
 
 class TestPipeline(unittest.TestCase):
     def test_single_sample_wt_and_deletion(self):
-        deleted = AMP1[: GUIDE1_START + 4] + AMP1[GUIDE1_START + 9 :]  # −5
+        cut = GUIDE1_START + 17
+        deleted = AMP1[: cut - 2] + AMP1[cut + 3 :]  # −5 across cut
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             fa = valid_single_guide_fasta(td / "ref.fa")
@@ -107,8 +108,9 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(result.efficiencies[0].wt_unedited, 1)
 
     def test_substitution_counts_as_edited_for_efficiency_but_wt_for_frame(self):
+        cut = GUIDE1_START + 17
         chars = list(AMP1)
-        for i in range(GUIDE1_START, GUIDE1_START + 5):
+        for i in range(cut - 3, cut + 3):
             chars[i] = "A" if AMP1[i] != "A" else "C"
         sub = "".join(chars)
         with tempfile.TemporaryDirectory() as td:
