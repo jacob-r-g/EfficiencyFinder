@@ -1,10 +1,11 @@
 """WT/edited calling per guide and editing-efficiency summaries.
 
-WT is cut-local: with both near-flanks placed, the 6 bp window
-(3 bp upstream + 3 bp downstream of the SpCas9 cut) must match the
-reference exactly. Distal spacer noise (e.g. ±1 in a homopolymer away
-from the junction) does not count as editing. Failed flank placement is
-inconclusive (excluded from pct_editing), not a large-deletion call.
+WT is cut-local: with both near-flanks placed, the nuclease-specific WT
+window on the reference must appear intact between the flanks.
+  Cas9: 3 bp upstream + 3 bp downstream of the blunt cut
+  Cas12: spacer positions 16–23 (covers the staggered cuts)
+Distal spacer noise outside that window does not count as editing. Failed
+flank placement is inconclusive (excluded from pct_editing).
 """
 
 from collections import Counter, defaultdict
@@ -20,7 +21,6 @@ MISMATCH_THRESH_TARGET = 4
 K_SPAN = 15
 COVERAGE_MARGIN = 40
 MIN_GUIDE_COVERAGE_KMERS = 2
-CUT_WINDOW_BP = 3  # bp upstream and downstream of the cut for WT
 
 STATUS_NOT_SEQUENCED = "not_sequenced"
 STATUS_INCONCLUSIVE = "inconclusive"
@@ -50,13 +50,6 @@ def _guide_window(gi, amp_len: int, coverage_margin: int) -> tuple[int, int]:
     return start, end
 
 
-def _cut_ref_window(amp_seq: str, cut_pos: int, n: int = CUT_WINDOW_BP) -> str | None:
-    """Reference sequence of n bp upstream + n bp downstream of the cut."""
-    if cut_pos < n or cut_pos + n > len(amp_seq):
-        return None
-    return amp_seq[cut_pos - n : cut_pos + n]
-
-
 def _call_with_flanks(
     read_seq: str,
     amp_seq: str,
@@ -73,9 +66,9 @@ def _call_with_flanks(
     if not (l_ok and r_ok):
         return STATUS_INCONCLUSIVE
 
-    ref_win = _cut_ref_window(amp_seq, gi.cut_pos)
-    if ref_win is None:
+    if gi.wt_start < 0 or gi.wt_end > len(amp_seq) or gi.wt_start >= gi.wt_end:
         return STATUS_INCONCLUSIVE
+    ref_win = amp_seq[gi.wt_start : gi.wt_end]
 
     # Sequence between the placed flanks (inclusive of the target region).
     between = read_seq[lpos + len(lf) : rpos]
@@ -98,12 +91,11 @@ def call_editing_status(
     guides_by_amplicon,
     settings: PipelineSettings | None = None,
 ) -> list[ReadGuideCall]:
-    """Call WT/edited per guide using cut-local WT.
+    """Call WT/edited per guide using the nuclease WT window on GuideInfo.
 
     Coverage is per-guide. WT requires both near-flanks and an exact match to
-    the 6 bp cut window (3 upstream + 3 downstream of the Cas9 cut). Missing
-    flanks are inconclusive (not large-deletion). A guide the read never
-    reaches stays not_sequenced.
+    the reference WT window (Cas9 cut ±3 bp, or Cas12 spacer 16–23). Missing
+    flanks are inconclusive. A guide the read never reaches stays not_sequenced.
     """
     s = settings or PipelineSettings()
     region_kmer_cache = {}

@@ -19,6 +19,10 @@ from tests.helpers import (
     AMP1_NAME,
     AMP2_EXCISION,
     AMP2_NAME,
+    CAS12_AMP1,
+    CAS12_AMP1_NAME,
+    CAS12_GUIDE1_NAME,
+    CAS12_GUIDE1_START,
     GUIDE1,
     GUIDE1_END,
     GUIDE1_NAME,
@@ -26,6 +30,7 @@ from tests.helpers import (
     GUIDE2A_NAME,
     GUIDE2B_NAME,
     LEFT,
+    valid_cas12_single_guide_fasta,
     valid_single_guide_fasta,
     valid_two_guide_fasta,
 )
@@ -181,6 +186,44 @@ class TestCallEditingStatus(unittest.TestCase):
         self.assertEqual(row.edited, 0)
         self.assertEqual(row.reads_spanning_target, 1)
         self.assertEqual(row.pct_editing, 0.0)
+
+
+class TestCas12Editing(unittest.TestCase):
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        fa = valid_cas12_single_guide_fasta(Path(self._td.name) / "ref.fa")
+        self.ref = load_reference_set(str(fa), flank=25, nuclease="cas12")
+        self.gi = self.ref.guides[CAS12_GUIDE1_NAME]
+        # spacer 16–23 window
+        self.wt0 = self.gi.wt_start
+        self.wt1 = self.gi.wt_end
+
+    def tearDown(self):
+        self._td.cleanup()
+
+    def _call(self, reads):
+        return call_editing_status(
+            reads,
+            self.ref.amplicons,
+            self.ref.guides,
+            self.ref.guides_by_amplicon,
+        )
+
+    def test_wt_intact(self):
+        cr = ClassifiedRead("wt", CAS12_AMP1, CAS12_AMP1_NAME, "+", 100, 0)
+        self.assertEqual(self._call([cr])[0].status, STATUS_WT)
+
+    def test_distal_spacer_indel_still_wt(self):
+        # Delete 1 bp early in spacer (pos 1–2 after PAM); WT window 16–23 intact.
+        pam_end = CAS12_GUIDE1_START + 4
+        read = CAS12_AMP1[: pam_end + 1] + CAS12_AMP1[pam_end + 2 :]
+        cr = ClassifiedRead("distal", read, CAS12_AMP1_NAME, "+", 100, 0)
+        self.assertEqual(self._call([cr])[0].status, STATUS_WT)
+
+    def test_indel_in_spacer_16_23_is_edited(self):
+        read = CAS12_AMP1[: self.wt0 + 2] + CAS12_AMP1[self.wt0 + 5 :]
+        cr = ClassifiedRead("edit", read, CAS12_AMP1_NAME, "+", 100, 0)
+        self.assertEqual(self._call([cr])[0].status, STATUS_DEL_SMALL)
 
 
 if __name__ == "__main__":
