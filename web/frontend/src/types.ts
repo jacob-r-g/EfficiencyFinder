@@ -1,4 +1,7 @@
+export type Nuclease = "cas9" | "cas12";
+
 export type PipelineSettings = {
+  nuclease: Nuclease;
   k_classify: number;
   min_classify_score: number;
   flank: number;
@@ -16,6 +19,7 @@ export type PipelineSettings = {
 };
 
 export const DEFAULT_SETTINGS: PipelineSettings = {
+  nuclease: "cas9",
   k_classify: 17,
   min_classify_score: 15,
   flank: 25,

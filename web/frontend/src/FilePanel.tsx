@@ -1,4 +1,5 @@
 import { useCallback, useRef } from "react";
+import type { Nuclease } from "./types";
 
 const FASTA_RE = /\.(fasta|fa|fna|fas|txt)$/i;
 const FASTQ_RE = /\.(fastq|fq)(\.gz)?$/i;
@@ -8,9 +9,11 @@ type Props = {
   fastqs: File[];
   running: boolean;
   combineFastqs: boolean;
+  nuclease: Nuclease;
   onFasta: (file: File | null) => void;
   onFastqs: (files: File[]) => void;
   onCombineFastqs: (value: boolean) => void;
+  onNuclease: (value: Nuclease) => void;
   onRun: () => void;
 };
 
@@ -25,9 +28,11 @@ export default function FilePanel({
   fastqs,
   running,
   combineFastqs,
+  nuclease,
   onFasta,
   onFastqs,
   onCombineFastqs,
+  onNuclease,
   onRun,
 }: Props) {
   const fastaRef = useRef<HTMLInputElement>(null);
@@ -131,6 +136,21 @@ export default function FilePanel({
           onChange={(e) => onCombineFastqs(e.target.checked)}
         />
         Combine FASTQs into one sample
+      </label>
+      <label
+        className="row"
+        title="Cas9: guide = spacer+NGG; WT = 3 bp up + 3 bp down of the blunt cut. Cas12: guide = 4 bp PAM + spacer; WT = spacer positions 16–23."
+      >
+        <span>Nuclease</span>
+        <select
+          className="grow"
+          disabled={running}
+          value={nuclease}
+          onChange={(e) => onNuclease(e.target.value as Nuclease)}
+        >
+          <option value="cas9">SpCas9 (NGG)</option>
+          <option value="cas12">Cas12a / Cpf1 (TTTV)</option>
+        </select>
       </label>
     </section>
   );
