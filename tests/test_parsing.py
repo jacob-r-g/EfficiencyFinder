@@ -16,6 +16,8 @@ from tests.helpers import (
     AMP1_NAME,
     AMP2,
     AMP2_NAME,
+    CAS12_GUIDE1_NAME,
+    CAS12_GUIDE1_START,
     GUIDE1,
     GUIDE1_END,
     GUIDE1_NAME,
@@ -23,6 +25,7 @@ from tests.helpers import (
     GUIDE2,
     GUIDE2A_NAME,
     GUIDE2B_NAME,
+    valid_cas12_single_guide_fasta,
     valid_single_guide_fasta,
     valid_two_guide_fasta,
     write_fasta,
@@ -86,9 +89,23 @@ class TestLoadReferenceSet(unittest.TestCase):
             self.assertEqual(gi.target_end, GUIDE1_END)
             self.assertEqual(gi.strand, "+")
             self.assertEqual(gi.cut_pos, GUIDE1_START + 17)
+            self.assertEqual(gi.wt_start, GUIDE1_START + 14)
+            self.assertEqual(gi.wt_end, GUIDE1_START + 20)
             self.assertEqual(gi.left_flank, AMP1[GUIDE1_START - 25 : GUIDE1_START])
             self.assertEqual(gi.right_flank, AMP1[GUIDE1_END : GUIDE1_END + 25])
             self.assertEqual(ref.guides_by_amplicon[AMP1_NAME], [GUIDE1_NAME])
+            self.assertEqual(ref.nuclease, "cas9")
+
+    def test_cas12_geometry(self):
+        with tempfile.TemporaryDirectory() as td:
+            fa = valid_cas12_single_guide_fasta(Path(td) / "ref.fa")
+            ref = load_reference_set(str(fa), flank=25, nuclease="cas12")
+            gi = ref.guides[CAS12_GUIDE1_NAME]
+            self.assertEqual(gi.target_start, CAS12_GUIDE1_START)
+            self.assertEqual(gi.cut_pos, CAS12_GUIDE1_START + 4 + 17)
+            self.assertEqual(gi.wt_start, CAS12_GUIDE1_START + 4 + 15)
+            self.assertEqual(gi.wt_end, CAS12_GUIDE1_START + 4 + 23)
+            self.assertEqual(ref.nuclease, "cas12")
 
     def test_valid_two_guide_amplicon(self):
         with tempfile.TemporaryDirectory() as td:
@@ -114,6 +131,8 @@ class TestLoadReferenceSet(unittest.TestCase):
             self.assertEqual(gi.target_end, GUIDE1_END)
             self.assertEqual(gi.strand, "-")
             self.assertEqual(gi.cut_pos, GUIDE1_START + 6)
+            self.assertEqual(gi.wt_start, GUIDE1_START + 3)
+            self.assertEqual(gi.wt_end, GUIDE1_START + 9)
 
     def test_mismatched_guide_amplicon_name(self):
         with tempfile.TemporaryDirectory() as td:
