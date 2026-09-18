@@ -4,8 +4,8 @@ Desktop app for CRISPR editing efficiency from nanopore amplicon FASTQ. Fully of
 
 It reports, per sample:
 
-- Read classification to amplicon
-- WT vs edited (insertions, small/large deletions, substitutions)
+- Read classification to amplicon (assigned vs unassigned)
+- WT vs edited at each Cas9 cut (3 bp up + 3 bp down of the cut must match for WT)
 - Indel size and in-frame vs frameshift
 - Distinct alleles (for chimerism)
 - Paired-guide excision (both cuts at once, intervening fragment dropped)
@@ -77,14 +77,15 @@ Example files are in `sample files/`.
 
 ## Results
 
-Four tabs, all sortable/filterable and exportable to CSV:
+Tabs, all sortable/filterable and exportable to CSV:
 
 | Tab | What it shows |
 |---|---|
-| **Efficiency** | Per-guide WT vs edited counts and % (substitutions count as edited) |
-| **Indel & Frame** | Net indel size, in-frame vs frameshift. Substitutions are WT here. PNG histogram export. |
+| **Assignment** | Per-sample assigned vs unassigned reads; per-amplicon counts; download unassigned FASTQ |
+| **Efficiency** | Per-guide cut-local WT vs edited % (WT = exact 6 bp at the Cas9 cut; distal spacer noise ignored; failed flanks = inconclusive) |
+| **Indel & Frame** | Net indel size at the guide window, in-frame vs frameshift. Substitutions are WT here. Per-guide histogram. |
 | **Alleles** | Distinct edit outcomes per sample, plus alleles shared across the batch |
-| **Paired excision** | For amplicons with 2+ guides: reads that are large-deleted at every cut site at once, with confirmed dropout size |
+| **Paired excision** | For amplicons with 2+ guides: reads with failed local flanks at every guide, with confirmed outer-flank dropout size |
 
 Advanced settings (collapsed by default) expose the analysis thresholds.
 

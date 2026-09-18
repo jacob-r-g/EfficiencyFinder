@@ -87,8 +87,9 @@ export default function DocsPanel() {
       </p>
       <p>
         On amplicons with two guides where only one is active in your line, editing at
-        the other guide is often <code>edited_deletion_large</code> from a real edit at
-        the active guide — not independent off-target cutting.
+        the other guide is scored only at the Cas9 cut window (3 bp up + 3 bp down).
+        Distal nanopore ±1 noise usually stays WT; missing flanks are inconclusive,
+        not counted as editing.
       </p>
 
       <h2>Efficiency tab</h2>
@@ -99,14 +100,17 @@ export default function DocsPanel() {
       <p>
         <strong>Coverage (per guide).</strong> A read contributes to a guide only if it
         overlaps that guide’s local window (flanks ± coverage margin). Reads that never
-        reach a cut are <code>not_sequenced</code> for that guide only. Missing flanks
-        still produce an edit call (usually a large deletion), so a large dropout
-        between two guides is not discarded from efficiency.
+        reach a cut are <code>not_sequenced</code> for that guide only.
       </p>
       <p>
-        <strong>Call rules.</strong> Match left and right flanks around the guide. If
-        both match: compare observed gap to WT target length → WT, substitution,
-        insertion, or small deletion. If either flank fails → large deletion.
+        <strong>Call rules (cut-local WT).</strong> Match left and right flanks around
+        the guide. If either flank fails → <code>inconclusive</code> (cannot place the
+        cut; excluded from <code>pct_editing</code>). If both flanks match: require the
+        exact 6 bp window at the SpCas9 cut (3 bp upstream + 3 bp downstream) to match
+        the reference → <code>WT_intact</code>. Distal spacer length noise (e.g. ±1 bp
+        in a homopolymer away from the junction) does <em>not</em> count as editing.
+        If that cut window is disrupted, classify by gap length as insertion, small
+        deletion, or substitution.
       </p>
       <dl>
         <Term name="total_amplicon_reads">
@@ -114,38 +118,39 @@ export default function DocsPanel() {
           denominator).
         </Term>
         <Term name="reads_spanning_target">
-          Reads that overlap this guide’s window enough to attempt a call
-          (= total − not_sequenced for this guide).
+          Reads with a conclusive WT/edited call at this guide (= total − not_sequenced
+          − inconclusive).
         </Term>
         <Term name="not_sequenced">
           Assigned to the amplicon but does not overlap this guide’s local window.
           Excluded from <code>pct_editing</code>.
         </Term>
+        <Term name="inconclusive">
+          Guide window is covered but near-flanks could not be placed, so the cut site
+          cannot be checked. Excluded from <code>pct_editing</code>. Common for large
+          dropouts; paired-excision uses this co-occurrence across guides.
+        </Term>
         <Term name="wt_unedited">
-          Both flanks match and the target sequence matches WT within the substitution
-          mismatch tolerance.
+          Both flanks match and the 6 bp cut window is letter-identical to WT.
         </Term>
         <Term name="edited">
-          Spanning reads that are not WT. Includes insertions, small/large deletions,
-          and substitutions.
+          Conclusive calls that are not WT (cut window disrupted).
         </Term>
         <Term name="edited_insertion">
-          Both flanks match; observed gap longer than the WT target.
+          Cut window disrupted; observed flank-to-flank gap longer than the WT target.
         </Term>
         <Term name="edited_deletion_small">
-          Both flanks match; observed gap shorter than the WT target.
+          Cut window disrupted; observed gap shorter than the WT target.
         </Term>
         <Term name="edited_deletion_large">
-          One or both flanks fail to match — consistent with a deletion that removes
-          flank sequence (including many paired-guide events).
+          Reserved for rare large-del classifications; missing flanks are{" "}
+          <code>inconclusive</code>, not this status.
         </Term>
         <Term name="edited_substitution">
-          Both flanks match and gap length equals WT, but the target bases differ beyond
-          the mismatch tolerance.
+          Cut window disrupted while flank-to-flank gap length still equals WT.
         </Term>
         <Term name="pct_editing">
-          <code>100 × edited / reads_spanning_target</code>. Substitutions count as
-          edited. Empty spanning set → blank/NA.
+          <code>100 × edited / reads_spanning_target</code>. Empty spanning set → blank/NA.
         </Term>
       </dl>
 
@@ -219,8 +224,9 @@ export default function DocsPanel() {
       </p>
       <ul>
         <li>
-          A read is a candidate when <em>every</em> guide on that amplicon is called
-          large deletion (and none are not_sequenced).
+          A read is a candidate when <em>every</em> guide on that amplicon is
+          <code>inconclusive</code> (local flanks failed; none are{" "}
+          <code>not_sequenced</code>).
         </li>
         <li>
           Confirmation matches the leftmost guide’s left flank to the rightmost guide’s
@@ -241,7 +247,9 @@ export default function DocsPanel() {
           Reads with a call at every guide on the amplicon (no not_sequenced).
         </Term>
         <Term name="n_simultaneous_large_del / pct_…">
-          Spanning reads where all guides are large deletions.
+          Spanning reads where every guide failed local flank placement
+          (<code>inconclusive</code>) — the co-occurrence signature for paired
+          excision candidates.
         </Term>
         <Term name="n_confirmed_excision / pct_… / median_excision_bp">
           Subset with confirmed outer-flank dropout; percent of spanning reads; median

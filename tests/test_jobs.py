@@ -34,7 +34,7 @@ class TestJobManager(unittest.TestCase):
     def test_submit_runs_analyze_and_drops_inputs(self):
         gate = threading.Event()
 
-        def analyze(fasta, fastqs, settings, on_progress):
+        def analyze(fasta, fastqs, settings, on_progress, job_dir=None):
             on_progress(1, 1, "s", stage="Classifying reads", stage_i=2, stage_n=5)
             gate.wait(timeout=1)
             return {"ok": True, "fasta": fasta.name}
@@ -64,7 +64,7 @@ class TestJobManager(unittest.TestCase):
         release_first = threading.Event()
         saw_second_while_first_running = threading.Event()
 
-        def analyze(fasta, fastqs, settings, on_progress):
+        def analyze(fasta, fastqs, settings, on_progress, job_dir=None):
             if fasta.name == "ref.fa":
                 if not release_first.wait(timeout=1):
                     raise AssertionError("first job not released")
@@ -94,7 +94,7 @@ class TestJobManager(unittest.TestCase):
     def test_combine_fastqs_passes_single_file(self):
         seen = {}
 
-        def analyze(fasta, fastqs, settings, on_progress):
+        def analyze(fasta, fastqs, settings, on_progress, job_dir=None):
             seen["names"] = [p.name for p in fastqs]
             seen["n_reads"] = sum(
                 1 for p in fastqs for line in p.read_text().splitlines() if line.startswith("@")

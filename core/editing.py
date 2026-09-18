@@ -1,4 +1,11 @@
-"""WT/edited calling per guide and editing-efficiency summaries."""
+"""WT/edited calling per guide and editing-efficiency summaries.
+
+WT is cut-local: with both near-flanks placed, the 6 bp window
+(3 bp upstream + 3 bp downstream of the SpCas9 cut) must match the
+reference exactly. Distal spacer noise (e.g. ±1 in a homopolymer away
+from the junction) does not count as editing. Failed flank placement is
+inconclusive (excluded from pct_editing), not a large-deletion call.
+"""
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -13,13 +20,18 @@ MISMATCH_THRESH_TARGET = 4
 K_SPAN = 15
 COVERAGE_MARGIN = 40
 MIN_GUIDE_COVERAGE_KMERS = 2
+CUT_WINDOW_BP = 3  # bp upstream and downstream of the cut for WT
 
 STATUS_NOT_SEQUENCED = "not_sequenced"
+STATUS_INCONCLUSIVE = "inconclusive"
 STATUS_WT = "WT_intact"
 STATUS_INSERTION = "edited_insertion"
 STATUS_DEL_SMALL = "edited_deletion_small"
 STATUS_DEL_LARGE = "edited_deletion_large"
 STATUS_SUBSTITUTION = "edited_substitution"
+
+# Statuses that do not enter the pct_editing denominator.
+_EXCLUDED_FROM_SPANNING = frozenset({STATUS_NOT_SEQUENCED, STATUS_INCONCLUSIVE})
 
 
 @dataclass
@@ -38,6 +50,47 @@ def _guide_window(gi, amp_len: int, coverage_margin: int) -> tuple[int, int]:
     return start, end
 
 
+def _cut_ref_window(amp_seq: str, cut_pos: int, n: int = CUT_WINDOW_BP) -> str | None:
+    """Reference sequence of n bp upstream + n bp downstream of the cut."""
+    if cut_pos < n or cut_pos + n > len(amp_seq):
+        return None
+    return amp_seq[cut_pos - n : cut_pos + n]
+
+
+def _call_with_flanks(
+    read_seq: str,
+    amp_seq: str,
+    gi,
+    *,
+    mismatch_thresh_flank: int,
+) -> str:
+    """Classify one guide when the read covers its local window."""
+    lf, rf = gi.left_flank, gi.right_flank
+    lpos, lmm = find_best_match(lf, read_seq)
+    rpos, rmm = find_best_match(rf, read_seq)
+    l_ok = lpos is not None and lmm <= mismatch_thresh_flank
+    r_ok = rpos is not None and rmm <= mismatch_thresh_flank
+    if not (l_ok and r_ok):
+        return STATUS_INCONCLUSIVE
+
+    ref_win = _cut_ref_window(amp_seq, gi.cut_pos)
+    if ref_win is None:
+        return STATUS_INCONCLUSIVE
+
+    # Sequence between the placed flanks (inclusive of the target region).
+    between = read_seq[lpos + len(lf) : rpos]
+    if ref_win in between:
+        return STATUS_WT
+
+    observed_gap = rpos - (lpos + len(lf))
+    expected_gap = gi.target_end - gi.target_start
+    if observed_gap > expected_gap:
+        return STATUS_INSERTION
+    if observed_gap < expected_gap:
+        return STATUS_DEL_SMALL
+    return STATUS_SUBSTITUTION
+
+
 def call_editing_status(
     classified_reads,
     amplicons,
@@ -45,12 +98,12 @@ def call_editing_status(
     guides_by_amplicon,
     settings: PipelineSettings | None = None,
 ) -> list[ReadGuideCall]:
-    """Call WT/edited per guide.
+    """Call WT/edited per guide using cut-local WT.
 
-    Coverage is per-guide: a read only needs to overlap that guide's local
-    window. Missing flanks still produce an edit call (typically large
-    deletion), so paired-guide dropouts between cuts are not discarded as
-    not_sequenced. A guide the read never reaches stays not_sequenced.
+    Coverage is per-guide. WT requires both near-flanks and an exact match to
+    the 6 bp cut window (3 upstream + 3 downstream of the Cas9 cut). Missing
+    flanks are inconclusive (not large-deletion). A guide the read never
+    reaches stays not_sequenced.
     """
     s = settings or PipelineSettings()
     region_kmer_cache = {}
@@ -73,7 +126,8 @@ def call_editing_status(
 
         read_seq = cr.oriented_seq
         read_kmers = kmer_set(read_seq, k=s.k_span)
-        amp_len = len(amplicons[cr.amplicon])
+        amp_seq = amplicons[cr.amplicon]
+        amp_len = len(amp_seq)
 
         for gname in gnames:
             gi = guides[gname]
@@ -83,35 +137,14 @@ def call_editing_status(
                 >= MIN_GUIDE_COVERAGE_KMERS
             )
             if not covered:
-                calls.append(
-                    ReadGuideCall(
-                        cr.read_id, cr.amplicon, cr.orientation, gname, STATUS_NOT_SEQUENCED
-                    )
-                )
-                continue
-
-            lf, rf, tgt = gi.left_flank, gi.right_flank, gi.target
-            lpos, lmm = find_best_match(lf, read_seq)
-            rpos, rmm = find_best_match(rf, read_seq)
-            l_ok = lpos is not None and lmm <= s.mismatch_thresh_flank
-            r_ok = rpos is not None and rmm <= s.mismatch_thresh_flank
-
-            if l_ok and r_ok:
-                observed_gap = rpos - (lpos + len(lf))
-                expected_gap = len(tgt)
-                if observed_gap == expected_gap:
-                    obs_target = read_seq[lpos + len(lf) : lpos + len(lf) + expected_gap]
-                    tmm = sum(1 for a, b in zip(obs_target, tgt) if a != b)
-                    status = (
-                        STATUS_WT if tmm <= s.mismatch_thresh_target else STATUS_SUBSTITUTION
-                    )
-                elif observed_gap > expected_gap:
-                    status = STATUS_INSERTION
-                else:
-                    status = STATUS_DEL_SMALL
+                status = STATUS_NOT_SEQUENCED
             else:
-                status = STATUS_DEL_LARGE
-
+                status = _call_with_flanks(
+                    read_seq,
+                    amp_seq,
+                    gi,
+                    mismatch_thresh_flank=s.mismatch_thresh_flank,
+                )
             calls.append(
                 ReadGuideCall(cr.read_id, cr.amplicon, cr.orientation, gname, status)
             )
@@ -126,6 +159,7 @@ class GuideEfficiency:
     total_amplicon_reads: int
     reads_spanning_target: int
     not_sequenced: int
+    inconclusive: int
     wt_unedited: int
     edited: int
     edited_insertion: int
@@ -145,7 +179,7 @@ def summarize_efficiency(
     for gname, gi in guides.items():
         t = tally[gname]
         total = amp_read_counts.get(gi.amplicon, 0)
-        covered = sum(v for k, v in t.items() if k != STATUS_NOT_SEQUENCED)
+        covered = sum(v for k, v in t.items() if k not in _EXCLUDED_FROM_SPANNING)
         wt = t[STATUS_WT]
         edited = covered - wt
         pct = 100 * edited / covered if covered else float("nan")
@@ -157,6 +191,7 @@ def summarize_efficiency(
                 total_amplicon_reads=total,
                 reads_spanning_target=covered,
                 not_sequenced=t[STATUS_NOT_SEQUENCED],
+                inconclusive=t[STATUS_INCONCLUSIVE],
                 wt_unedited=wt,
                 edited=edited,
                 edited_insertion=t[STATUS_INSERTION],

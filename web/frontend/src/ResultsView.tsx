@@ -10,8 +10,8 @@ const ASSIGNMENT_SAMPLE = [
 const ASSIGNMENT_AMP = ["sample", "amplicon", "n_reads", "pct_of_sample"];
 const EFFICIENCY = [
   "sample", "guide", "amplicon", "total_amplicon_reads", "reads_spanning_target",
-  "not_sequenced", "wt_unedited", "edited", "edited_insertion", "edited_deletion_small",
-  "edited_deletion_large", "edited_substitution", "pct_editing",
+  "not_sequenced", "inconclusive", "wt_unedited", "edited", "edited_insertion",
+  "edited_deletion_small", "edited_deletion_large", "edited_substitution", "pct_editing",
 ];
 const INDEL = [
   "sample", "guide", "amplicon", "n_reads_with_size_call", "wt", "edited", "pct_editing",
