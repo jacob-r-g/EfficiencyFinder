@@ -72,7 +72,7 @@ CCACTTCGGCTAGCCGAATGGGA
 - Guide headers **must** contain `_G`, and the text before the first `_G` must match the amplicon header exactly (including case and spaces).
 - Guide sequence must be an exact substring of that amplicon on either strand:
   - **SpCas9:** protospacer + NGG PAM
-  - **Cas12a:** 4 bp PAM (TTTV) + spacer
+  - **Cas12a:** first 4 bp of the guide entry are the PAM (as written, any sequence) + spacer
 - Choose the matching nuclease in the UI (default SpCas9). The WT window is cut-local: Cas9 = 3 bp up + 3 bp down of the blunt cut; Cas12 = spacer positions 16–23.
 - An amplicon can have 0, 1, or several guides. Empty guide sequences are skipped.
 

@@ -42,7 +42,7 @@ def guide_geometry(
             cut_pos = pos + guide_len - max(0, spacer_len - pam_len)
         return cut_pos, cut_pos - 3, cut_pos + 3
 
-    # Cas12a: guide = 4 bp PAM + spacer; spacer positions 1.. after PAM.
+    # Cas12a: guide FASTA = 4 bp PAM (as written; not a fixed TTTV motif) + spacer.
     # Guide-strand cut between spacer 17–18; WT window = spacer 16–23.
     pam_len = 4
     spacer_len = max(0, guide_len - pam_len)

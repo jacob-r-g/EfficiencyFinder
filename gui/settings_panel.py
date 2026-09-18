@@ -162,10 +162,11 @@ class SettingsPanel(QWidget):
 
         self._nuclease = QComboBox()
         self._nuclease.addItem("SpCas9 (NGG)", "cas9")
-        self._nuclease.addItem("Cas12a / Cpf1 (TTTV)", "cas12")
+        self._nuclease.addItem("Cas12a / Cpf1", "cas12")
         self._nuclease.setToolTip(
             "Cas9: guide = spacer+NGG; WT = cut ±3 bp. "
-            "Cas12: guide = 4 bp PAM + spacer; WT = spacer positions 16–23."
+            "Cas12: first 4 bp of each guide FASTA entry are the PAM "
+            "(sequence as written); WT = spacer positions 16–23."
         )
         self._nuclease.setCurrentIndex(0)
 
