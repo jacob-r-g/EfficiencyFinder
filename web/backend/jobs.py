@@ -53,7 +53,9 @@ def default_analyze(
 ) -> dict:
     n = max(len(fastqs), 1)
     on_progress(0, n, "", stage="Loading reference", stage_i=0, stage_n=1)
-    ref = load_reference_set(str(fasta), flank=settings.flank)
+    ref = load_reference_set(
+        str(fasta), flank=settings.flank, nuclease=settings.nuclease
+    )
     batch = run_batch(
         [str(p) for p in fastqs],
         ref,

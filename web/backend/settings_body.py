@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import fields
 
+from core.nuclease import normalize_nuclease
 from core.settings import PipelineSettings
 
 
@@ -19,6 +20,11 @@ def settings_from_dict(data: dict | None) -> PipelineSettings:
         raise SettingsError(f"unknown settings: {', '.join(sorted(unknown))}")
     values = {name: getattr(PipelineSettings(), name) for name in allowed}
     values.update(incoming)
+    if "nuclease" in values:
+        try:
+            values["nuclease"] = normalize_nuclease(values["nuclease"])
+        except ValueError as exc:
+            raise SettingsError(str(exc)) from exc
     try:
         return PipelineSettings(**values)
     except TypeError as exc:
