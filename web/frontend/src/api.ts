@@ -8,6 +8,12 @@ async function check(res: Response): Promise<Response> {
   try {
     const body = await res.json();
     if (typeof body.detail === "string") detail = body.detail;
+    else if (Array.isArray(body.detail)) {
+      detail = body.detail
+        .map((d: { msg?: string }) => d.msg)
+        .filter(Boolean)
+        .join("; ") || JSON.stringify(body.detail);
+    }
   } catch {
     /* ignore non-JSON errors */
   }

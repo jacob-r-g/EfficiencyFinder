@@ -15,7 +15,7 @@ class JobCreate(BaseModel):
     upload_id: str
     fasta: str
     fastqs: list[str] = Field(min_length=1)
-    settings: dict[str, int | float] = Field(default_factory=dict)
+    settings: dict[str, int | float | str | bool] = Field(default_factory=dict)
     combine_fastqs: bool = False
 
 

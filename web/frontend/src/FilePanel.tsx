@@ -139,7 +139,7 @@ export default function FilePanel({
       </label>
       <label
         className="row"
-        title="Cas9: guide = spacer+NGG; WT = 3 bp up + 3 bp down of the blunt cut. Cas12: guide = 4 bp PAM + spacer; WT = spacer positions 16–23."
+        title="Cas9: guide = spacer+NGG; WT = 3 bp up + 3 bp down of the blunt cut. Cas12: first 4 bp of the guide FASTA entry are the PAM (whatever they are); WT = spacer 16–23."
       >
         <span>Nuclease</span>
         <select
@@ -149,7 +149,7 @@ export default function FilePanel({
           onChange={(e) => onNuclease(e.target.value as Nuclease)}
         >
           <option value="cas9">SpCas9 (NGG)</option>
-          <option value="cas12">Cas12a / Cpf1 (TTTV)</option>
+          <option value="cas12">Cas12a / Cpf1</option>
         </select>
       </label>
     </section>

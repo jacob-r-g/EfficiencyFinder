@@ -57,6 +57,22 @@ class TestJobApi(unittest.TestCase):
         results = self.client.get(f"/api/jobs/{job_id}/results")
         self.assertEqual(results.json(), {"ok": True})
 
+    def test_create_job_accepts_nuclease_string(self):
+        uid = self._upload()
+        created = self.client.post(
+            "/api/jobs",
+            json={
+                "upload_id": uid,
+                "fasta": "ref.fa",
+                "fastqs": ["s.fq"],
+                "settings": {"nuclease": "cas12", "k_classify": 17},
+            },
+        )
+        self.assertEqual(created.status_code, 200, created.text)
+        job_id = created.json()["id"]
+        status = _wait_status(self.client, job_id)
+        self.assertEqual(status["status"], "done")
+
     def test_unknown_job_is_404(self):
         res = self.client.get("/api/jobs/00000000-0000-0000-0000-000000000000")
         self.assertEqual(res.status_code, 404)

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 @dataclass
 class PipelineSettings:
-    # nuclease geometry (Cas9: NGG + cut±3; Cas12: TTTV PAM + spacer 16–23 WT)
+    # nuclease geometry (Cas9: NGG + cut±3; Cas12: 4 bp PAM from guide + spacer 16–23 WT)
     nuclease: str = "cas9"
     # classification
     k_classify: int = 17

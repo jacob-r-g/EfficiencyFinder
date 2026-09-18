@@ -44,8 +44,9 @@ export default function DocsPanel() {
           <strong>Guide</strong> headers must contain <code>_G</code>, and the text
           before the first <code>_G</code> must match the amplicon name exactly (case
           and spaces). Sequence must be an exact substring of that amplicon on either
-          strand: SpCas9 = protospacer+NGG; Cas12a = 4 bp PAM + spacer. Select the
-          matching nuclease before running (default SpCas9).
+          strand: SpCas9 = protospacer+NGG; Cas12a = PAM (first 4 bp of the guide
+          entry, as written) + spacer. Select the matching nuclease before running
+          (default SpCas9).
         </li>
         <li>An amplicon may have 0, 1, or several guides. Empty guide sequences are skipped.</li>
       </ul>
@@ -261,9 +262,9 @@ export default function DocsPanel() {
       <h2>UI options</h2>
       <dl>
         <Term name="Nuclease">
-          SpCas9 (default) or Cas12a/Cpf1. Controls PAM/cut geometry and the WT
-          window used for efficiency calling. Must match how guides are written in
-          the FASTA.
+          SpCas9 (default) or Cas12a/Cpf1. Controls cut/WT geometry. Cas12 PAM is
+          not a fixed motif: the first 4 bp of each guide FASTA sequence are the
+          PAM as you wrote them.
         </Term>
         <Term name="Combine FASTQs into one sample">
           Concatenate all uploaded FASTQs and analyze as a single sample (e.g. one plant
