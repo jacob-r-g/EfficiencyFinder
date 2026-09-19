@@ -87,7 +87,7 @@ Tabs, all sortable/filterable and exportable to CSV:
 | **Assignment** | Per-sample assigned vs unassigned reads; per-amplicon counts; download unassigned FASTQ |
 | **Efficiency** | Per-guide cut-local WT vs edited % (Cas9: 6 bp at cut; Cas12: spacer 16–23; distal spacer noise ignored; failed flanks = inconclusive). Select a row to inspect example reads. |
 | **Indel & Frame** | Net indel size at the guide window, in-frame vs frameshift. Substitutions are WT here. Per-guide histogram. |
-| **Alleles** | Distinct edit outcomes per sample, plus alleles shared across the batch |
+| **Alleles** | Distinct edit outcomes per sample (always amplicon 5′→3′; deletions as N vs WT), plus alleles shared across the batch |
 | **Paired excision** | For amplicons with 2+ guides: reads with failed local flanks at every guide, with confirmed outer-flank dropout size |
 
 Advanced settings (collapsed by default) expose the analysis thresholds.

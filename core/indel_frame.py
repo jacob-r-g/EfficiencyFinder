@@ -13,6 +13,11 @@ MAX_EXTRA = 400  # cap on how far the anchor search will extend
 ANCHOR_STEPS = (25, 50, 75, 100, 150, 200, 300, 400)
 ARTIFACT_SIZE_THRESHOLD = 100  # net indel sizes beyond this are concatemer artifacts
 
+# Pairwise alignment scores for allele display (allele vs WT target).
+_ALIGN_MATCH = 2
+_ALIGN_MISMATCH = -1
+_ALIGN_GAP = -2
+
 
 def extract_allele(
     read_seq,
@@ -24,7 +29,10 @@ def extract_allele(
     anchor_steps=ANCHOR_STEPS,
 ):
     """Same incremental-anchor search as measure_indel_size, but returns the actual
-    observed sequence at the locus (not just its length) plus the indel size."""
+    observed sequence at the locus (not just its length) plus the indel size.
+
+    `read_seq` must already be on the amplicon forward strand (use oriented_seq).
+    """
     expected_gap = target_end - target_start
     for L in anchor_steps:
         if L > max_extra:
@@ -44,6 +52,70 @@ def extract_allele(
             allele_seq = read_seq[lpos + len(left_anchor) : rpos]
             return len(allele_seq) - expected_gap, allele_seq
     return None, None
+
+
+def format_allele_display(allele_seq: str, wt_seq: str) -> str:
+    """Encode allele relative to WT target for display (amplicon 5'→3').
+
+    - Matching / substituted bases: allele base
+    - Deletions (present in WT, absent in allele): ``N``
+    - Insertions (extra in allele): inserted bases as written
+
+    Both inputs must be on the same strand (amplicon forward).
+    """
+    if not wt_seq:
+        return allele_seq
+    if not allele_seq:
+        return "N" * len(wt_seq)
+
+    n, m = len(allele_seq), len(wt_seq)
+    # DP[i][j] = best score aligning allele[:i] to wt[:j]
+    neg = -10**9
+    dp = [[neg] * (m + 1) for _ in range(n + 1)]
+    bt = [[0] * (m + 1) for _ in range(n + 1)]  # 0 diag, 1 up (del), 2 left (ins)
+    dp[0][0] = 0
+    for i in range(1, n + 1):
+        dp[i][0] = dp[i - 1][0] + _ALIGN_GAP
+        bt[i][0] = 2
+    for j in range(1, m + 1):
+        dp[0][j] = dp[0][j - 1] + _ALIGN_GAP
+        bt[0][j] = 1
+
+    for i in range(1, n + 1):
+        a = allele_seq[i - 1]
+        row = dp[i]
+        prev = dp[i - 1]
+        for j in range(1, m + 1):
+            w = wt_seq[j - 1]
+            diag = prev[j - 1] + (_ALIGN_MATCH if a == w else _ALIGN_MISMATCH)
+            up = row[j - 1] + _ALIGN_GAP  # gap in allele → deletion vs WT
+            left = prev[j] + _ALIGN_GAP  # gap in WT → insertion
+            if diag >= up and diag >= left:
+                row[j] = diag
+                bt[i][j] = 0
+            elif up >= left:
+                row[j] = up
+                bt[i][j] = 1
+            else:
+                row[j] = left
+                bt[i][j] = 2
+
+    out: list[str] = []
+    i, j = n, m
+    while i > 0 or j > 0:
+        move = bt[i][j]
+        if i > 0 and j > 0 and move == 0:
+            out.append(allele_seq[i - 1])
+            i -= 1
+            j -= 1
+        elif j > 0 and (i == 0 or move == 1):
+            out.append("N")
+            j -= 1
+        else:
+            out.append(allele_seq[i - 1])
+            i -= 1
+    out.reverse()
+    return "".join(out)
 
 
 def measure_indel_size(

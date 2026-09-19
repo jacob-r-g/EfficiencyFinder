@@ -216,8 +216,15 @@ export default function DocsPanel() {
         <Term name="singleton_reads_excluded">
           Sequences seen once that did not merge into a confident allele.
         </Term>
+        <Term name="wt_target">
+          Amplicon-forward WT target window (5′→3′), same orientation for every allele
+          on that guide — including when the guide or read was reverse-strand.
+        </Term>
         <Term name="allele_seq / indel_size_bp">
-          Observed sequence at the locus and its length minus WT target length.
+          Allele aligned to <code>wt_target</code> for display: deleted bases are{" "}
+          <code>N</code>, insertions and substitutions show the observed bases. Always
+          amplicon 5′→3′. <code>indel_size_bp</code> is still net length change vs WT
+          (from the raw observed sequence before display encoding).
         </Term>
         <Term name="Shared across samples">
           Confident alleles (same guide + sequence) appearing in more than one sample
