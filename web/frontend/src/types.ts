@@ -73,6 +73,41 @@ export type IndelSizeObservation = {
   indel_size_bp: number;
 };
 
+export type InspectExample = {
+  read_id: string;
+  orientation: string;
+  status: string;
+  between: string;
+  observed_gap: number;
+  expected_gap: number;
+  wt_window_found: boolean;
+  note: string;
+};
+
+export type GuideInspect = {
+  sample: string;
+  guide: string;
+  amplicon: string;
+  nuclease: string;
+  strand: string;
+  ref_local: string;
+  left_flank_len: number;
+  right_flank_len: number;
+  target_len: number;
+  pam_start: number;
+  pam_end: number;
+  spacer_start: number;
+  spacer_end: number;
+  wt_start: number;
+  wt_end: number;
+  cut_offset: number;
+  ref_wt_window: string;
+  examples: InspectExample[];
+  n_edited_total: number;
+  n_wt_total: number;
+  n_inconclusive_total: number;
+};
+
 export type BatchResult = {
   samples: SampleCounts[];
   unassigned_exports: UnassignedExport[];
@@ -86,6 +121,7 @@ export type BatchResult = {
   indel_sizes: number[];
   excision_summaries: Record<string, unknown>[];
   excision_sizes: Record<string, unknown>[];
+  inspect?: GuideInspect[];
   n_reads: number;
   n_assigned: number;
   n_unassigned: number;

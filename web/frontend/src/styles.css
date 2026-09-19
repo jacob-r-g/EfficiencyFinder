@@ -418,3 +418,183 @@ tbody tr.selected {
     grid-template-columns: 1fr;
   }
 }
+
+/* Efficiency Inspect panel */
+.inspect-panel {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.inspect-empty {
+  color: #666;
+}
+
+.inspect-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.insp-meta {
+  color: #666;
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.insp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 0.8rem;
+}
+
+.insp-legend > span {
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.insp-ref-block {
+  margin: 8px 0 12px;
+}
+
+.insp-label {
+  font-size: 0.8rem;
+  color: #555;
+  margin: 4px 0;
+}
+
+.insp-seq-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  padding: 6px 0;
+}
+
+.insp-seq {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.insp-base {
+  padding: 1px 0;
+}
+
+.insp-flank {
+  background: #e8e8e8;
+  color: #555;
+}
+
+.insp-spacer {
+  background: #dbeafe;
+}
+
+.insp-pam {
+  background: #fde68a;
+  font-weight: 600;
+}
+
+.insp-wt {
+  background: #bbf7d0;
+  font-weight: 600;
+}
+
+.insp-cut-mark {
+  color: #b91c1c;
+  font-weight: 700;
+  padding: 0 1px;
+}
+
+.insp-cut-legend {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.insp-wt-code {
+  background: #bbf7d0;
+  padding: 1px 4px;
+}
+
+.insp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.insp-filters button.active {
+  background: #1f6feb;
+  color: #fff;
+  border-color: #1f6feb;
+}
+
+.insp-reads {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.insp-read {
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+}
+
+.insp-read-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+
+.insp-status {
+  font-size: 0.75rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #eee;
+}
+
+.insp-status-WT_intact {
+  background: #bbf7d0;
+}
+
+.insp-status-edited_insertion,
+.insp-status-edited_deletion_small,
+.insp-status-edited_deletion_large,
+.insp-status-edited_substitution {
+  background: #fecaca;
+}
+
+.insp-status-inconclusive {
+  background: #fde68a;
+}
+
+.insp-wt-hit {
+  background: #bbf7d0;
+  font-weight: 600;
+}
+
+.insp-edited-seq {
+  background: #fee2e2;
+}
+
+.insp-muted {
+  color: #888;
+  font-style: italic;
+}
+
+.insp-read-seq {
+  font-size: 11px;
+}

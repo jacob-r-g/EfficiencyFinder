@@ -1,8 +1,9 @@
 import { useState } from "react";
 import DataTable from "./DataTable";
 import IndelHistogram from "./IndelHistogram";
+import InspectPanel from "./InspectPanel";
 import { unassignedDownloadUrl } from "./api";
-import type { BatchResult } from "./types";
+import type { BatchResult, GuideInspect } from "./types";
 
 const ASSIGNMENT_SAMPLE = [
   "sample_name", "n_reads", "n_assigned", "n_unassigned", "pct_assigned",
@@ -50,6 +51,9 @@ export default function ResultsView({ result, jobId }: Props) {
   const [detailFilter, setDetailFilter] = useState<Record<string, unknown> | null>(null);
   const [indelFilter, setIndelFilter] = useState<Record<string, unknown> | null>(null);
   const [excisionFilter, setExcisionFilter] = useState<Record<string, unknown> | null>(null);
+  const [inspectKey, setInspectKey] = useState<{ sample: string; guide: string } | null>(
+    null,
+  );
 
   if (!result) {
     return <section className="results">Run an analysis to see results.</section>;
@@ -96,6 +100,13 @@ export default function ResultsView({ result, jobId }: Props) {
   const histTitle = indelFilter
     ? `Indel size distribution — ${String(indelFilter.sample)} / ${String(indelFilter.guide)}`
     : "Indel size distribution (select a summary row)";
+
+  const inspectPanel: GuideInspect | null =
+    inspectKey == null
+      ? null
+      : (result.inspect ?? []).find(
+          (p) => p.sample === inspectKey.sample && p.guide === inspectKey.guide,
+        ) ?? null;
 
   return (
     <section className="results">
@@ -162,7 +173,28 @@ export default function ResultsView({ result, jobId }: Props) {
         </>
       )}
       {tab === "Efficiency" && (
-        <DataTable columns={EFFICIENCY} rows={efficiencies} filename="efficiency.csv" />
+        <>
+          <p className="hint">
+            Select a row to inspect example WT / edited reads at that guide (cut-local WT
+            window highlighted on the reference).
+          </p>
+          <DataTable
+            columns={EFFICIENCY}
+            rows={efficiencies}
+            filename="efficiency.csv"
+            onSelect={(row) => {
+              if (!row) {
+                setInspectKey(null);
+                return;
+              }
+              setInspectKey({
+                sample: String(row.sample ?? ""),
+                guide: String(row.guide ?? ""),
+              });
+            }}
+          />
+          <InspectPanel panel={inspectPanel} onClose={() => setInspectKey(null)} />
+        </>
       )}
       {tab === "Indel & Frame" && (
         <>
