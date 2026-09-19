@@ -39,7 +39,7 @@ class TestPairedExcision(unittest.TestCase):
 
     def test_wt_is_not_excision(self):
         cr = ClassifiedRead("wt", AMP2, AMP2_NAME, "+", 100, 0)
-        calls = call_editing_status(
+        calls, _ = call_editing_status(
             [cr],
             self.ref.amplicons,
             self.ref.guides,
@@ -57,7 +57,7 @@ class TestPairedExcision(unittest.TestCase):
 
     def test_intervening_dropout_is_confirmed_excision(self):
         cr = ClassifiedRead("ex", AMP2_EXCISION, AMP2_NAME, "+", 100, 0)
-        calls = call_editing_status(
+        calls, _ = call_editing_status(
             [cr],
             self.ref.amplicons,
             self.ref.guides,
@@ -91,7 +91,7 @@ class TestPairedExcision(unittest.TestCase):
         cut = GUIDE1_START + 17
         read = AMP2[: cut - 2] + AMP2[cut + 3 :]
         cr = ClassifiedRead("one", read, AMP2_NAME, "+", 100, 0)
-        calls = call_editing_status(
+        calls, _ = call_editing_status(
             [cr],
             self.ref.amplicons,
             self.ref.guides,

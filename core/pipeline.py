@@ -6,7 +6,12 @@ from math import nan
 
 from .alleles import call_alleles_for_sample
 from .classify import classify_reads
-from .editing import GuideEfficiency, call_editing_status, summarize_efficiency
+from .editing import (
+    GuideEfficiency,
+    GuideInspect,
+    call_editing_status,
+    summarize_efficiency,
+)
 from .excision import ExcisionSizeRow, ExcisionSummary, call_paired_excisions
 from .indel_frame import classify_frame, extract_allele
 from .parsing import ReferenceSet, parse_fastq, sample_name_from_path
@@ -135,6 +140,7 @@ class SampleResult:
     indel_sizes: list[int]  # flat sizes for PNG export (includes WT 0)
     excision_summaries: list[ExcisionSummary]
     excision_sizes: list[ExcisionSizeRow]
+    inspect: list[GuideInspect] = field(default_factory=list)
 
 
 @dataclass
@@ -150,6 +156,7 @@ class BatchResult:
     excision_summaries: list[ExcisionSummary] = field(default_factory=list)
     excision_sizes: list[ExcisionSizeRow] = field(default_factory=list)
     amplicon_assignments: list[AmpliconAssignment] = field(default_factory=list)
+    inspect: list[GuideInspect] = field(default_factory=list)
     n_reads: int = 0
     n_assigned: int = 0
     n_unassigned: int = 0
@@ -330,12 +337,13 @@ def run_single_sample(
     ]
 
     stage(3)
-    calls = call_editing_status(
+    calls, inspect = call_editing_status(
         classified,
         ref_set.amplicons,
         ref_set.guides,
         ref_set.guides_by_amplicon,
         settings=settings,
+        sample=name,
     )
     efficiencies = summarize_efficiency(
         calls, ref_set.guides, amp_read_counts, sample=name
@@ -369,6 +377,7 @@ def run_single_sample(
         indel_sizes=[o.indel_size_bp for o in indel_size_obs],
         excision_summaries=excision_summaries,
         excision_sizes=excision_sizes,
+        inspect=inspect,
     )
 
 
@@ -440,6 +449,7 @@ def run_batch(
         excision_summaries=[row for s in samples for row in s.excision_summaries],
         excision_sizes=[row for s in samples for row in s.excision_sizes],
         amplicon_assignments=_amplicon_assignments(samples),
+        inspect=[panel for s in samples for panel in s.inspect],
         n_reads=sum(s.n_reads for s in samples),
         n_assigned=sum(s.n_assigned for s in samples),
         n_unassigned=sum(s.n_unassigned for s in samples),
