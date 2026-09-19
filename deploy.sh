@@ -6,7 +6,8 @@
 #   ./deploy.sh
 #
 # You will be prompted once for the Unraid SSH password (unless SSH_KEY_PATH
-# is set). ControlMaster reuses that session for scp + remote docker commands.
+# is set). A ControlMaster session holds that login for the rest of the script
+# (scp + remote docker), then closes on exit.
 #
 # Optional:
 #   ./deploy.sh --skip-build   # reuse the already-built local image tag
@@ -23,7 +24,7 @@ for arg in "$@"; do
   case "$arg" in
     --skip-build) SKIP_BUILD=1 ;;
     -h|--help)
-      sed -n '2,14p' "$0"
+      sed -n '2,15p' "$0"
       exit 0
       ;;
     *)
@@ -50,36 +51,53 @@ fi
 IMAGE=efficiencyfinder-webapp
 TAR="${IMAGE}-latest.tar"
 SSH_TARGET="$UNRAID_USER@$UNRAID_HOST"
-CONTROL_PATH="/tmp/ssh-ef-deploy-$$"
+CONTROL_DIR="${TMPDIR:-/tmp}/ssh-ef-deploy-$$"
+CONTROL_PATH="$CONTROL_DIR/sock"
 VERSION="$(tr -d '[:space:]' < VERSION 2>/dev/null || echo unknown)"
 
 cleanup() {
+  # Close the multiplexed master (if still up), then remove the socket dir + tar.
   ssh -o ControlPath="$CONTROL_PATH" -O exit "$SSH_TARGET" 2>/dev/null || true
-  rm -f "$CONTROL_PATH" "$TAR"
+  rm -rf "$CONTROL_DIR"
+  rm -f "$TAR"
 }
 trap cleanup EXIT INT TERM
 
-# Shared SSH options. Prefer password auth by default so macOS does not burn
-# through agent keys and hit "Too many authentication failures" before asking
-# for a password. Set SSH_KEY_PATH in .deploy.config to use a key instead.
-SSH_OPTS=(
-  -o ControlMaster=yes
-  -o ControlPath="$CONTROL_PATH"
-  -o ControlPersist=180
+mkdir -p "$CONTROL_DIR"
+chmod 700 "$CONTROL_DIR"
+
+# Auth / keepalive shared by master + slaves.
+# Prefer password auth by default so macOS does not burn through agent keys and
+# hit "Too many authentication failures" before asking for a password.
+# Set SSH_KEY_PATH in .deploy.config to use a key instead.
+AUTH_OPTS=(
   -o StrictHostKeyChecking=no
   -o NumberOfPasswordPrompts=1
   -o ServerAliveInterval=30
 )
 if [ -n "${SSH_KEY_PATH:-}" ]; then
-  # Expand ~ if present
   KEY_PATH="${SSH_KEY_PATH/#\~/$HOME}"
-  SSH_OPTS+=(-i "$KEY_PATH" -o IdentitiesOnly=yes)
+  AUTH_OPTS+=(-i "$KEY_PATH" -o IdentitiesOnly=yes)
 else
-  SSH_OPTS+=(
+  AUTH_OPTS+=(
     -o PreferredAuthentications=password,keyboard-interactive
     -o PubkeyAuthentication=no
   )
 fi
+
+# Master: create the shared connection (password prompt happens here once).
+SSH_MASTER_OPTS=(
+  -o ControlMaster=yes
+  -o ControlPath="$CONTROL_PATH"
+  -o ControlPersist=300
+  "${AUTH_OPTS[@]}"
+)
+# Slaves: attach to the existing master — no second password prompt.
+SSH_OPTS=(
+  -o ControlMaster=no
+  -o ControlPath="$CONTROL_PATH"
+  "${AUTH_OPTS[@]}"
+)
 
 echo -e "${GREEN}=== EfficiencyFinder webapp deployment ===${NC}"
 echo "  Host:    $SSH_TARGET"
@@ -103,9 +121,9 @@ echo -e "${YELLOW}[2/4] Saving Docker image...${NC}"
 docker save "${IMAGE}:latest" -o "$TAR"
 echo -e "${GREEN}✓ Image saved ($(du -h "$TAR" | awk '{print $1}'))${NC}"
 
-echo -e "${YELLOW}[3/4] Connecting to Unraid (enter SSH password if prompted)...${NC}"
-# Open the master connection once; later ssh/scp reuse it with no re-prompt.
-ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "mkdir -p '$UNRAID_DEPLOY_PATH/data'"
+echo -e "${YELLOW}[3/4] Connecting to Unraid (enter SSH password once if prompted)...${NC}"
+# Open the master connection once; scp + later ssh reuse it.
+ssh "${SSH_MASTER_OPTS[@]}" "$SSH_TARGET" "mkdir -p '$UNRAID_DEPLOY_PATH/data'"
 echo "  - Transferring image…"
 scp "${SSH_OPTS[@]}" "$TAR" "$SSH_TARGET:$UNRAID_DEPLOY_PATH/"
 echo -e "${GREEN}✓ Files transferred${NC}"
