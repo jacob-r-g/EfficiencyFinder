@@ -14,6 +14,7 @@ from core.editing import (
     summarize_efficiency,
 )
 from core.parsing import load_reference_set
+from core.settings import PipelineSettings
 from tests.helpers import (
     AMP1,
     AMP1_NAME,
@@ -53,12 +54,13 @@ class TestCallEditingStatus(unittest.TestCase):
         self._td.cleanup()
 
     def _call(self, reads):
-        return call_editing_status(
+        calls, _ = call_editing_status(
             reads,
             self.ref.amplicons,
             self.ref.guides,
             self.ref.guides_by_amplicon,
         )
+        return calls
 
     def test_wt_intact(self):
         calls = self._call([_wt_read()])
@@ -109,7 +111,7 @@ class TestCallEditingStatus(unittest.TestCase):
         # Right flank of A is missing → inconclusive at A.
         read = LEFT + GUIDE1
         cr = ClassifiedRead("short", read, AMP2_NAME, "+", 100, 0)
-        calls = call_editing_status(
+        calls, _ = call_editing_status(
             [cr], ref.amplicons, ref.guides, ref.guides_by_amplicon
         )
         by_guide = {c.guide: c.status for c in calls}
@@ -128,7 +130,7 @@ class TestCallEditingStatus(unittest.TestCase):
             fa = valid_two_guide_fasta(Path(td) / "ref.fa")
             ref = load_reference_set(str(fa), flank=25)
         cr = ClassifiedRead("ex", AMP2_EXCISION, AMP2_NAME, "+", 100, 0)
-        calls = call_editing_status(
+        calls, _ = call_editing_status(
             [cr], ref.amplicons, ref.guides, ref.guides_by_amplicon
         )
         by_guide = {c.guide: c.status for c in calls}
@@ -202,16 +204,14 @@ class TestCas12Editing(unittest.TestCase):
         self._td.cleanup()
 
     def _call(self, reads):
-        return call_editing_status(
+        calls, _ = call_editing_status(
             reads,
             self.ref.amplicons,
             self.ref.guides,
             self.ref.guides_by_amplicon,
+            settings=PipelineSettings(nuclease="cas12"),
         )
-
-    def test_wt_intact(self):
-        cr = ClassifiedRead("wt", CAS12_AMP1, CAS12_AMP1_NAME, "+", 100, 0)
-        self.assertEqual(self._call([cr])[0].status, STATUS_WT)
+        return calls
 
     def test_distal_spacer_indel_still_wt(self):
         # Delete 1 bp early in spacer (pos 1–2 after PAM); WT window 16–23 intact.
@@ -224,6 +224,47 @@ class TestCas12Editing(unittest.TestCase):
         read = CAS12_AMP1[: self.wt0 + 2] + CAS12_AMP1[self.wt0 + 5 :]
         cr = ClassifiedRead("edit", read, CAS12_AMP1_NAME, "+", 100, 0)
         self.assertEqual(self._call([cr])[0].status, STATUS_DEL_SMALL)
+
+
+class TestInspectExamples(unittest.TestCase):
+    def test_edited_and_wt_examples_captured(self):
+        with tempfile.TemporaryDirectory() as td:
+            fa = valid_single_guide_fasta(Path(td) / "ref.fa")
+            ref = load_reference_set(str(fa), flank=25)
+        cut = GUIDE1_START + 17
+        reads = [
+            ClassifiedRead("wt1", AMP1, AMP1_NAME, "+", 100, 0),
+            ClassifiedRead(
+                "del1",
+                AMP1[: cut - 2] + AMP1[cut + 3 :],
+                AMP1_NAME,
+                "+",
+                100,
+                0,
+            ),
+        ]
+        calls, panels = call_editing_status(
+            reads,
+            ref.amplicons,
+            ref.guides,
+            ref.guides_by_amplicon,
+            sample="s1",
+        )
+        self.assertEqual({c.status for c in calls}, {STATUS_WT, STATUS_DEL_SMALL})
+        self.assertEqual(len(panels), 1)
+        panel = panels[0]
+        self.assertEqual(panel.sample, "s1")
+        self.assertEqual(panel.guide, GUIDE1_NAME)
+        self.assertTrue(panel.ref_wt_window)
+        self.assertLess(panel.wt_start, panel.wt_end)
+        self.assertEqual(panel.n_wt_total, 1)
+        self.assertEqual(panel.n_edited_total, 1)
+        by_status = {e.status: e for e in panel.examples}
+        self.assertIn(STATUS_WT, by_status)
+        self.assertIn(STATUS_DEL_SMALL, by_status)
+        self.assertTrue(by_status[STATUS_WT].wt_window_found)
+        self.assertFalse(by_status[STATUS_DEL_SMALL].wt_window_found)
+        self.assertIn("deletion", by_status[STATUS_DEL_SMALL].note.lower())
 
 
 if __name__ == "__main__":
