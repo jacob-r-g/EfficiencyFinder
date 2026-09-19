@@ -2,10 +2,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core.indel_frame import classify_frame, extract_allele, measure_indel_size
-from core.parsing import load_reference_set
+from core.indel_frame import (
+    classify_frame,
+    extract_allele,
+    format_allele_display,
+    measure_indel_size,
+)
+from core.parsing import load_reference_set, revcomp
 from tests.helpers import (
     AMP1,
+    GUIDE1,
     GUIDE1_END,
     GUIDE1_START,
     valid_single_guide_fasta,
@@ -74,6 +80,53 @@ class TestMeasureIndelSize(unittest.TestCase):
             self.assertEqual(
                 measure_indel_size(read, AMP1, gi.target_start, gi.target_end), -1
             )
+
+
+class TestFormatAlleleDisplay(unittest.TestCase):
+    def test_deletion_uses_n(self):
+        wt = "ACGTACGT"
+        allele = "ACGTGT"  # deleted AC in the middle
+        disp = format_allele_display(allele, wt)
+        self.assertEqual(disp.count("N"), 2)
+        self.assertEqual(len(disp) - disp.count("N"), len(allele))
+        self.assertTrue(disp.startswith("ACGT"))
+        self.assertTrue(disp.endswith("GT"))
+
+    def test_insertion_keeps_extra_bases(self):
+        wt = "ACGT"
+        allele = "ACGGGT"
+        disp = format_allele_display(allele, wt)
+        self.assertNotIn("N", disp)
+        self.assertIn("GGG", disp)
+        self.assertEqual(len(disp), len(allele))
+
+    def test_substitution_shows_allele_base(self):
+        wt = "ACGT"
+        allele = "ACCT"
+        self.assertEqual(format_allele_display(allele, wt), "ACCT")
+
+    def test_identical_is_unchanged(self):
+        wt = GUIDE1
+        self.assertEqual(format_allele_display(wt, wt), wt)
+
+    def test_rc_read_allele_matches_forward_display(self):
+        """Alleles extracted from RC-oriented reads stay amplicon 5'→3'."""
+        # 5 bp deletion inside the guide on the forward amplicon.
+        fwd_read = AMP1[: GUIDE1_START + 4] + AMP1[GUIDE1_START + 9 :]
+        size_f, seq_f = extract_allele(fwd_read, AMP1, GUIDE1_START, GUIDE1_END)
+        # Same molecule sequenced opposite strand: classify stores RC as seq and
+        # orientation '-', then oriented_seq = revcomp(seq) recovers forward.
+        raw_rc = revcomp(fwd_read)
+        oriented = revcomp(raw_rc)
+        size_r, seq_r = extract_allele(oriented, AMP1, GUIDE1_START, GUIDE1_END)
+        self.assertEqual(oriented, fwd_read)
+        self.assertEqual(size_f, size_r)
+        self.assertEqual(seq_f, seq_r)
+        wt = AMP1[GUIDE1_START:GUIDE1_END]
+        self.assertEqual(
+            format_allele_display(seq_f, wt), format_allele_display(seq_r, wt)
+        )
+        self.assertIn("N", format_allele_display(seq_f, wt))
 
 
 if __name__ == "__main__":

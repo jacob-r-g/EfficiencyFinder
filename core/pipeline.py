@@ -13,7 +13,7 @@ from .editing import (
     summarize_efficiency,
 )
 from .excision import ExcisionSizeRow, ExcisionSummary, call_paired_excisions
-from .indel_frame import classify_frame, extract_allele
+from .indel_frame import classify_frame, extract_allele, format_allele_display
 from .parsing import ReferenceSet, parse_fastq, sample_name_from_path
 from .settings import PipelineSettings
 
@@ -102,7 +102,8 @@ class AlleleDetail:
     n_reads: int
     pct_of_edited: float
     indel_size_bp: int
-    allele_seq: str
+    allele_seq: str  # display form vs WT (N = deletion); amplicon 5'→3'
+    wt_target: str  # amplicon-forward WT target window for comparison
     confident: bool
 
 
@@ -110,6 +111,7 @@ class AlleleDetail:
 class SharedAllele:
     guide: str
     allele_seq: str
+    wt_target: str
     indel_size_bp: int
     n_samples: int
     samples: str
@@ -274,6 +276,7 @@ def _analyze_guide_indels_and_alleles(
             (seq, count, False) for seq, count in extra
         ]
         ranked.sort(key=lambda x: -x[1])
+        wt_target = amp_seq[gi.target_start : gi.target_end]
         for rank, (seq, count, is_conf) in enumerate(ranked, start=1):
             allele_details.append(
                 AlleleDetail(
@@ -283,7 +286,8 @@ def _analyze_guide_indels_and_alleles(
                     n_reads=count,
                     pct_of_edited=_pct(count, edited),
                     indel_size_bp=len(seq) - expected,
-                    allele_seq=seq,
+                    allele_seq=format_allele_display(seq, wt_target),
+                    wt_target=wt_target,
                     confident=is_conf,
                 )
             )
@@ -384,18 +388,21 @@ def run_single_sample(
 def _shared_alleles(details: list[AlleleDetail]) -> list[SharedAllele]:
     samples_by_allele: dict[tuple[str, str], set[str]] = defaultdict(set)
     size_by_allele: dict[tuple[str, str], int] = {}
+    wt_by_allele: dict[tuple[str, str], str] = {}
     for d in details:
         if not d.confident:
             continue
         key = (d.guide, d.allele_seq)
         samples_by_allele[key].add(d.sample)
         size_by_allele[key] = d.indel_size_bp
+        wt_by_allele[key] = d.wt_target
     out = []
     for (guide, seq), samples in samples_by_allele.items():
         out.append(
             SharedAllele(
                 guide=guide,
                 allele_seq=seq,
+                wt_target=wt_by_allele[(guide, seq)],
                 indel_size_bp=size_by_allele[(guide, seq)],
                 n_samples=len(samples),
                 samples=", ".join(sorted(samples)),

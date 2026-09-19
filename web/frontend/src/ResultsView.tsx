@@ -25,9 +25,9 @@ const ALLELE_SUMMARY = [
 ];
 const ALLELE_DETAIL = [
   "sample", "guide", "allele_rank", "n_reads", "pct_of_edited", "indel_size_bp",
-  "allele_seq", "confident",
+  "wt_target", "allele_seq", "confident",
 ];
-const SHARED = ["guide", "n_samples", "samples", "indel_size_bp", "allele_seq"];
+const SHARED = ["guide", "n_samples", "samples", "indel_size_bp", "wt_target", "allele_seq"];
 const EXCISION = [
   "sample", "amplicon", "guides", "n_guides", "expected_dropout_bp", "n_spanning_reads",
   "n_simultaneous_large_del", "pct_simultaneous_large_del", "n_confirmed_excision",
@@ -221,6 +221,11 @@ export default function ResultsView({ result, jobId }: Props) {
             <DataTable columns={SHARED} rows={result.shared_alleles} filename="shared_alleles.csv" />
           ) : (
             <>
+              <p className="hint">
+                Allele sequences are always amplicon 5′→3′. Compare <code>allele_seq</code> to{" "}
+                <code>wt_target</code>: <code>N</code> marks deletions; insertions/substitutions
+                show the observed bases.
+              </p>
               <DataTable
                 columns={ALLELE_SUMMARY}
                 rows={alleleSummaries}

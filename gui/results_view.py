@@ -77,6 +77,7 @@ ALLELE_DETAIL_COLS = [
     ("n_reads", "n_reads"),
     ("pct_of_edited", "pct_of_edited"),
     ("indel_size_bp", "indel_size_bp"),
+    ("wt_target", "wt_target"),
     ("allele_seq", "allele_seq"),
     ("confident", "confident"),
 ]
@@ -86,6 +87,7 @@ SHARED_ALLELE_COLS = [
     ("n_samples", "n_samples"),
     ("samples", "samples"),
     ("indel_size_bp", "indel_size_bp"),
+    ("wt_target", "wt_target"),
     ("allele_seq", "allele_seq"),
 ]
 
