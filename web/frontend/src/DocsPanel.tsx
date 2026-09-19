@@ -114,6 +114,12 @@ export default function DocsPanel() {
         <em>not</em> count as editing. If the WT window is disrupted, classify by gap
         length as insertion, small deletion, or substitution.
       </p>
+      <p>
+        <strong>Inspect.</strong> On the Efficiency tab, select a row to open a local
+        sequence view: annotated reference (flanks, spacer, PAM, WT window, cut) plus
+        capped example reads for edited / WT / inconclusive calls so you can sanity-check
+        reported editing percentages.
+      </p>
       <dl>
         <Term name="total_amplicon_reads">
           Reads assigned to this amplicon (any guide on that amplicon shares this
