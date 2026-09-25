@@ -1,19 +1,19 @@
-# Deployment Configuration for EfficiencyFinder → Unraid
+# Remote Docker host settings for ./deploy.sh
 #
 # cp deploy.config.example .deploy.config
 # ./deploy.sh
-# (enter the Unraid SSH password when prompted — once per run)
+# (enter the SSH password when prompted — once per run — unless SSH_KEY_PATH is set)
 
-# Unraid server address (IP or hostname)
+# Server address (IP or hostname)
 UNRAID_HOST="192.168.1.100"
 
-# SSH username for Unraid
+# SSH username
 UNRAID_USER="root"
 
-# Deployment directory on Unraid
+# Directory on the remote host for the image tarball and /data volume
 UNRAID_DEPLOY_PATH="/mnt/user/appdata/efficiencyfinder-webapp"
 
 # Optional: path to an SSH private key. If set, password auth is not used.
-# Leave empty / commented to be prompted for the Unraid password in the terminal.
+# Leave empty to be prompted for the SSH password in the terminal.
 # SSH_KEY_PATH="~/.ssh/id_rsa"
 SSH_KEY_PATH=""

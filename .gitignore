@@ -6,10 +6,10 @@ dist/
 build/
 .DS_Store
 .pytest_cache/
-setup.log
-launch.log
 .deploy.config
 web/frontend/node_modules/
 web/frontend/dist/
 *-webapp-latest.tar
+
+# Local/private sequencing data (public demos live in examples/)
 sample files/

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Deploy EfficiencyFinder to Unraid.
+# Deploy EfficiencyFinder web app to a remote Docker host over SSH.
 #
 # Usage (from repo root, in your own terminal):
 #   cp deploy.config.example .deploy.config   # once
 #   ./deploy.sh
 #
-# You will be prompted once for the Unraid SSH password (unless SSH_KEY_PATH
+# You will be prompted once for the SSH password (unless SSH_KEY_PATH
 # is set). A ControlMaster session holds that login for the rest of the script
 # (scp + remote docker), then closes on exit.
 #
@@ -37,7 +37,7 @@ done
 CONFIG_FILE=".deploy.config"
 if [ ! -f "$CONFIG_FILE" ]; then
   echo -e "${RED}Error: $CONFIG_FILE not found.${NC}"
-  echo "Copy deploy.config.example to .deploy.config and fill in Unraid settings."
+  echo "Copy deploy.config.example to .deploy.config and fill in remote host settings."
   exit 1
 fi
 # shellcheck disable=SC1090
@@ -71,7 +71,7 @@ chmod 700 "$CONTROL_DIR"
 # hit "Too many authentication failures" before asking for a password.
 # Set SSH_KEY_PATH in .deploy.config to use a key instead.
 AUTH_OPTS=(
-  -o StrictHostKeyChecking=no
+  -o StrictHostKeyChecking=accept-new
   -o NumberOfPasswordPrompts=1
   -o ServerAliveInterval=30
 )
@@ -121,7 +121,7 @@ echo -e "${YELLOW}[2/4] Saving Docker image...${NC}"
 docker save "${IMAGE}:latest" -o "$TAR"
 echo -e "${GREEN}✓ Image saved ($(du -h "$TAR" | awk '{print $1}'))${NC}"
 
-echo -e "${YELLOW}[3/4] Connecting to Unraid (enter SSH password once if prompted)...${NC}"
+echo -e "${YELLOW}[3/4] Connecting to remote host (enter SSH password once if prompted)...${NC}"
 # Open the master connection once; scp + later ssh reuse it.
 ssh "${SSH_MASTER_OPTS[@]}" "$SSH_TARGET" "mkdir -p '$UNRAID_DEPLOY_PATH/data'"
 echo "  - Transferring image…"
@@ -160,4 +160,4 @@ EOF
 echo ""
 echo -e "${GREEN}Deployment complete (v${VERSION}).${NC}"
 echo "Confirm the live site shows v${VERSION} in the header (hard-refresh if needed)."
-echo "Tunnel target remains http://localhost:4322 on the Unraid host."
+echo "Point your reverse proxy or tunnel at http://localhost:4322 on the host."

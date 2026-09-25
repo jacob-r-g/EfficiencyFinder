@@ -1,6 +1,6 @@
 """CRISPR amplicon nanopore editing-efficiency analysis engine.
 
-This package has no GUI / PySide6 imports and can be used standalone.
+This package has no web-framework imports and can be used standalone.
 """
 
 from .settings import PipelineSettings
