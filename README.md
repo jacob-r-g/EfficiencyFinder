@@ -1,8 +1,12 @@
 # EfficiencyFinder
 
-Desktop app for CRISPR editing efficiency from nanopore amplicon FASTQ. Fully offline: pick a reference FASTA and one or more FASTQ files, then run.
+[![CI](https://github.com/jacob-r-g/EfficiencyFinder/actions/workflows/ci.yml/badge.svg)](https://github.com/jacob-r-g/EfficiencyFinder/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-It reports, per sample:
+Offline CRISPR editing-efficiency analysis from nanopore amplicon FASTQ. Use the macOS desktop app or the same engine in a browser via FastAPI + React.
+
+Per sample it reports:
 
 - Read classification to amplicon (assigned vs unassigned)
 - WT vs edited at each guide cut (Cas9: 3 bp up + 3 bp down; Cas12: spacer 16–23)
@@ -10,15 +14,17 @@ It reports, per sample:
 - Distinct alleles (for chimerism)
 - Paired-guide excision (both cuts at once, intervening fragment dropped)
 
-## Run
+Supports **SpCas9** and **Cas12a**. Analysis runs fully offline once dependencies are installed.
 
-**macOS:** unzip the folder, put the whole **EfficiencyFinder** folder in Applications, then double-click **`Setup EfficiencyFinder.command`** once (see `START HERE.txt`).
+## Quick start (desktop, macOS)
 
-After setup, open **`EfficiencyFinder.app`** (drag it to the Dock if you like). Keep the whole folder together — do not move only the `.app` out of the folder.
+1. Unzip the release folder and keep the whole **EfficiencyFinder** directory together.
+2. Double-click **`Setup EfficiencyFinder.command`** once (see `START HERE.txt`).
+3. Open **`EfficiencyFinder.app`** (optional: drag it to the Dock).
 
-Do not send the `.venv` folder (it is large and rebuilt automatically).
+Do not redistribute the `.venv` folder — it is large and rebuilt by setup.
 
-**From a terminal (optional):**
+**From a terminal:**
 
 ```bash
 python3 -m venv .venv
@@ -26,13 +32,11 @@ python3 -m venv .venv
 .venv/bin/python main.py
 ```
 
-Python 3.10+, with PySide6, numpy, and matplotlib.
+Requires Python 3.10+ with PySide6, numpy, and matplotlib.
 
-## Web app (home server)
+## Quick start (web, local)
 
-The same analysis runs in the browser via a FastAPI backend. FASTQ is uploaded in 8 MB chunks so it can pass Cloudflare's request-size limit.
-
-**Local development** (API on port 8000, Vite on 5173):
+API on port 8000, Vite on 5173:
 
 ```bash
 python3 -m pip install -r web/backend/requirements.txt
@@ -45,14 +49,29 @@ npm install
 npm run dev
 ```
 
-**Deploy to Unraid** (port 4322):
+FASTQ uploads are chunked (8 MB) so large files can pass reverse-proxy size limits.
+
+### Docker
 
 ```bash
-cp deploy.config.example .deploy.config   # once; set host / path
-./deploy.sh                               # enter Unraid SSH password when prompted
+docker compose up --build
+# → http://localhost:4322
 ```
 
-Bump the repo-root `VERSION` file before a deploy so you can confirm the live site (header `v…` or `/health`). Use `./deploy.sh --skip-build` to reuse an image you already built locally. Cloudflare Tunnel should point a public hostname at `http://localhost:4322` on the Unraid host.
+Or build and run the image from the repo root:
+
+```bash
+docker build -t efficiencyfinder-webapp .
+docker run --rm -p 4322:4322 -v ef-data:/data efficiencyfinder-webapp
+```
+
+Bump the repo-root `VERSION` file before a release so the live UI header / `/health` match what you deployed.
+
+> **Security:** the web API has no authentication. Only expose it on trusted networks, or put auth in front (VPN, reverse-proxy login, Cloudflare Access, etc.). See [SECURITY.md](SECURITY.md).
+
+### Optional remote deploy script
+
+`deploy.sh` builds a linux/amd64 image, copies it over SSH, and restarts a Docker container (defaults tuned for Unraid-style hosts). Copy `deploy.config.example` → `.deploy.config`, set host/user/path, then run `./deploy.sh`. Use `--skip-build` to reuse a local image.
 
 ## Inputs
 
@@ -76,7 +95,7 @@ CCACTTCGGCTAGCCGAATGGGA
 - Choose the matching nuclease in the UI (default SpCas9). The WT window is cut-local: Cas9 = 3 bp up + 3 bp down of the blunt cut; Cas12 = spacer positions 16–23.
 - An amplicon can have 0, 1, or several guides. Empty guide sequences are skipped.
 
-Example files are in `sample files/`.
+Tiny synthetic demo files are in [`examples/`](examples/).
 
 ## Results
 
@@ -90,10 +109,19 @@ Tabs, all sortable/filterable and exportable to CSV:
 | **Alleles** | Distinct edit outcomes per sample (always amplicon 5′→3′; deletions as N vs WT), plus alleles shared across the batch |
 | **Paired excision** | For amplicons with 2+ guides: reads with failed local flanks at every guide, with confirmed outer-flank dropout size |
 
-Advanced settings (collapsed by default) expose the analysis thresholds.
+Advanced settings (collapsed by default) expose the analysis thresholds. The web UI also includes an on-site guide to columns and parameters.
 
 ## Tests
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -v
+python3 -m pip install -r requirements.txt -r web/backend/requirements.txt
+PYTHONPATH=. python3 -m unittest discover -s tests -v
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, layout, and PR expectations. Please read the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+[MIT](LICENSE)
