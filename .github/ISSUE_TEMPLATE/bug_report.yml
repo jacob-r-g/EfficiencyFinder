@@ -18,7 +18,7 @@ body:
     id: reproduce
     attributes:
       label: Steps to reproduce
-      description: Desktop, web, or Docker? Include versions if known.
+      description: Local web, Docker, or deployed? Include versions if known.
       placeholder: |
         1. …
         2. …

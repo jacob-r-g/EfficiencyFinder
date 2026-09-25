@@ -4,20 +4,12 @@ Thanks for taking an interest in EfficiencyFinder. Small, focused pull requests 
 
 ## Development setup
 
-**Python 3.10+** is required for the analysis engine, desktop app, and API. **Node.js 20+** is required for the web frontend.
+**Python 3.10+** is required for the analysis engine and API. **Node.js 20+** is required for the web frontend.
 
-### Desktop app
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/python main.py
-```
-
-### Web backend + frontend
+### Backend + frontend
 
 ```bash
-python3 -m pip install -r web/backend/requirements.txt
+python3 -m pip install -r web/backend/requirements.txt -r requirements.txt
 PYTHONPATH=. python3 -m uvicorn web.backend.app:app --reload --port 8000
 ```
 
@@ -46,8 +38,7 @@ cd web/frontend && npm ci && npm run build
 
 | Path | Role |
 |------|------|
-| `core/` | Analysis engine (no GUI deps) |
-| `gui/` | PySide6 desktop UI |
+| `core/` | Analysis engine (no web framework deps) |
 | `web/backend/` | FastAPI upload + job API |
 | `web/frontend/` | React (Vite) SPA |
 | `tests/` | `unittest` suite |

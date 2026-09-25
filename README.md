@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-Offline CRISPR editing-efficiency analysis from nanopore amplicon FASTQ. Use the macOS desktop app or the same engine in a browser via FastAPI + React.
+Web app for CRISPR editing-efficiency analysis from nanopore amplicon FASTQ. A FastAPI backend runs the shared `core/` engine; a React UI handles uploads and results. Analysis is offline once the stack is running.
 
 Per sample it reports:
 
@@ -14,32 +14,14 @@ Per sample it reports:
 - Distinct alleles (for chimerism)
 - Paired-guide excision (both cuts at once, intervening fragment dropped)
 
-Supports **SpCas9** and **Cas12a**. Analysis runs fully offline once dependencies are installed.
+Supports **SpCas9** and **Cas12a**.
 
-## Quick start (desktop, macOS)
-
-1. Unzip the release folder and keep the whole **EfficiencyFinder** directory together.
-2. Double-click **`Setup EfficiencyFinder.command`** once (see `START HERE.txt`).
-3. Open **`EfficiencyFinder.app`** (optional: drag it to the Dock).
-
-Do not redistribute the `.venv` folder — it is large and rebuilt by setup.
-
-**From a terminal:**
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/python main.py
-```
-
-Requires Python 3.10+ with PySide6, numpy, and matplotlib.
-
-## Quick start (web, local)
+## Quick start (local)
 
 API on port 8000, Vite on 5173:
 
 ```bash
-python3 -m pip install -r web/backend/requirements.txt
+python3 -m pip install -r web/backend/requirements.txt -r requirements.txt
 PYTHONPATH=. python3 -m uvicorn web.backend.app:app --reload --port 8000
 ```
 
@@ -109,7 +91,7 @@ Tabs, all sortable/filterable and exportable to CSV:
 | **Alleles** | Distinct edit outcomes per sample (always amplicon 5′→3′; deletions as N vs WT), plus alleles shared across the batch |
 | **Paired excision** | For amplicons with 2+ guides: reads with failed local flanks at every guide, with confirmed outer-flank dropout size |
 
-Advanced settings (collapsed by default) expose the analysis thresholds. The web UI also includes an on-site guide to columns and parameters.
+Advanced settings (collapsed by default) expose the analysis thresholds. The UI also includes an on-site guide to columns and parameters.
 
 ## Tests
 
