@@ -2,7 +2,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![CI](https://img.shields.io/github/actions/workflow/status/jacob-r-g/EfficiencyFinder/ci.yml?branch=main&label=CI)](https://github.com/jacob-r-g/EfficiencyFinder/actions/workflows/ci.yml)
 
 Web app for CRISPR editing-efficiency analysis from nanopore amplicon FASTQ. A FastAPI backend runs the shared `core/` engine; a React UI handles uploads and results. Analysis is offline once the stack is running.
 
