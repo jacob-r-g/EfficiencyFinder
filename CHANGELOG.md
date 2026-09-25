@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-09
 
+### Changed
+
+- Relicensed from MIT to Apache License 2.0 (explicit patent grant).
+
 ### Removed
 
 - macOS desktop distribution (PySide6 `gui/`, `main.py`, `EfficiencyFinder.app`, setup scripts, and `START HERE.txt`). The web app is the supported interface.
