@@ -12,4 +12,6 @@ launch.log
 web/frontend/node_modules/
 web/frontend/dist/
 *-webapp-latest.tar
+
+# Local/private sequencing data (public demos live in examples/)
 sample files/
