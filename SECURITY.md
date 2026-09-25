@@ -16,6 +16,6 @@ Uploads and results are stored on disk under `EFFICIENCYFINDER_DATA` (default `/
 
 ## Historical sample data
 
-Early commits briefly included real sequencing files under `sample files/`. Those paths are gitignored and are not in the current tree. If that data must not be public, rewrite history (for example with [`git filter-repo`](https://github.com/newren/git-filter-repo)) to purge `sample files/` **before** making the repository public, then force-push and rotate any credentials that ever lived in the repo.
+Real sequencing files once lived under `test files/` / `sample files/` in early commits. Those paths were purged from git history with `git filter-repo` before the public release. Synthetic demo inputs live in `examples/` and are safe to share.
 
-Synthetic demo inputs live in `examples/` and are safe to share.
+If you have an old clone from before the rewrite, delete it and re-clone (or `git fetch` + reset hard to the rewritten tips) so orphaned blobs are not retained locally.
