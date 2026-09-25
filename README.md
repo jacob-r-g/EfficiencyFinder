@@ -104,6 +104,10 @@ PYTHONPATH=. python3 -m unittest discover -s tests -v
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, layout, and PR expectations. Please read the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Acknowledgments
+
+Original concept and scientific direction by [Mily Ron](https://www.linkedin.com/in/milyron) (plant molecular biologist, UC Davis). Software implementation and maintenance by [jacob-r-g](https://github.com/jacob-r-g).
+
 ## License
 
 [Apache License 2.0](LICENSE)
