@@ -4,8 +4,12 @@ WT is cut-local: with both near-flanks placed, the nuclease-specific WT
 window on the reference must appear intact between the flanks.
   Cas9: 3 bp upstream + 3 bp downstream of the blunt cut
   Cas12: spacer positions 16–23 (covers the staggered cuts)
-Distal spacer noise outside that window does not count as editing. Failed
-flank placement is inconclusive (excluded from pct_editing).
+Distal spacer noise outside that window does not count as editing.
+
+Near-flank failure starts as inconclusive. After paired-excision
+confirmation, promote_large_edits upgrades evidence-backed dropouts to
+edited_excision (dual-guide) or edited_deletion_large (single-site).
+Only residual unverified inconclusive stays excluded from pct_editing.
 """
 
 from collections import Counter, defaultdict
@@ -34,6 +38,7 @@ STATUS_WT = "WT_intact"
 STATUS_INSERTION = "edited_insertion"
 STATUS_DEL_SMALL = "edited_deletion_small"
 STATUS_DEL_LARGE = "edited_deletion_large"
+STATUS_EXCISION = "edited_excision"
 STATUS_SUBSTITUTION = "edited_substitution"
 
 # Statuses that do not enter the pct_editing denominator.
@@ -43,6 +48,7 @@ _EDITED_STATUSES = frozenset(
         STATUS_INSERTION,
         STATUS_DEL_SMALL,
         STATUS_DEL_LARGE,
+        STATUS_EXCISION,
         STATUS_SUBSTITUTION,
     }
 )
@@ -138,6 +144,10 @@ def _status_note(status: str, observed_gap: int, expected_gap: int) -> str:
         return f"Gap {observed_gap} bp > expected {expected_gap} bp (insertion)"
     if status == STATUS_DEL_SMALL:
         return f"Gap {observed_gap} bp < expected {expected_gap} bp (deletion)"
+    if status == STATUS_DEL_LARGE:
+        return f"Large single-site dropout ({observed_gap} bp gap vs expected {expected_gap})"
+    if status == STATUS_EXCISION:
+        return "Confirmed dual-guide excision dropout"
     if status == STATUS_SUBSTITUTION:
         return f"Gap matches expected {expected_gap} bp but WT window disrupted"
     return status
@@ -330,6 +340,7 @@ class GuideEfficiency:
     edited_insertion: int
     edited_deletion_small: int
     edited_deletion_large: int
+    edited_excision: int
     edited_substitution: int
     pct_editing: float
 
@@ -362,8 +373,38 @@ def summarize_efficiency(
                 edited_insertion=t[STATUS_INSERTION],
                 edited_deletion_small=t[STATUS_DEL_SMALL],
                 edited_deletion_large=t[STATUS_DEL_LARGE],
+                edited_excision=t[STATUS_EXCISION],
                 edited_substitution=t[STATUS_SUBSTITUTION],
                 pct_editing=round(pct, 1) if covered else float("nan"),
             )
         )
     return out
+
+
+def sync_inspect_after_promote(
+    calls: list[ReadGuideCall], panels: list[GuideInspect]
+) -> None:
+    """Refresh Inspect totals/example statuses to match promoted calls."""
+    by_guide_status: dict[str, Counter] = defaultdict(Counter)
+    status_by_read_guide: dict[tuple[str, str], str] = {}
+    for c in calls:
+        by_guide_status[c.guide][c.status] += 1
+        status_by_read_guide[(c.read_id, c.guide)] = c.status
+
+    for panel in panels:
+        t = by_guide_status[panel.guide]
+        panel.n_edited_total = sum(t[s] for s in _EDITED_STATUSES)
+        panel.n_wt_total = t[STATUS_WT]
+        panel.n_inconclusive_total = t[STATUS_INCONCLUSIVE]
+        for ex in panel.examples:
+            key = (ex.read_id, panel.guide)
+            if key in status_by_read_guide:
+                new_status = status_by_read_guide[key]
+                if new_status != ex.status:
+                    ex.status = new_status
+                    if new_status == STATUS_EXCISION:
+                        ex.note = _status_note(STATUS_EXCISION, 0, 0)
+                    elif new_status == STATUS_DEL_LARGE:
+                        ex.note = _status_note(
+                            STATUS_DEL_LARGE, ex.observed_gap, ex.expected_gap
+                        )

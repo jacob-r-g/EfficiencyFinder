@@ -4,6 +4,7 @@ from pathlib import Path
 
 from core.classify import ClassifiedRead
 from core.editing import (
+    STATUS_DEL_LARGE,
     STATUS_DEL_SMALL,
     STATUS_INCONCLUSIVE,
     STATUS_INSERTION,
@@ -13,6 +14,7 @@ from core.editing import (
     call_editing_status,
     summarize_efficiency,
 )
+from core.excision import promote_large_edits
 from core.parsing import load_reference_set
 from core.settings import PipelineSettings
 from tests.helpers import (
@@ -31,6 +33,7 @@ from tests.helpers import (
     GUIDE2A_NAME,
     GUIDE2B_NAME,
     LEFT,
+    random_dna,
     valid_cas12_single_guide_fasta,
     valid_single_guide_fasta,
     valid_two_guide_fasta,
@@ -167,27 +170,61 @@ class TestCallEditingStatus(unittest.TestCase):
         self.assertEqual(row.inconclusive, 0)
         self.assertEqual(row.pct_editing, 33.3)
 
-    def test_inconclusive_excluded_from_pct(self):
+    def test_unconfirmed_inconclusive_excluded_from_pct(self):
+        """Flank fail with no measurable outer dropout stays out of pct_editing."""
+        # Random left side so near- and outer-left anchors cannot place.
+        bad = random_dna(len(LEFT), seed=99) + GUIDE1 + AMP1[GUIDE1_END:]
         reads = [
             _wt_read("w1"),
-            ClassifiedRead(
-                "L",
-                AMP1[: GUIDE1_START - 10] + AMP1[GUIDE1_END + 10 :],
-                AMP1_NAME,
-                "+",
-                100,
-                0,
-            ),
+            ClassifiedRead("L", bad, AMP1_NAME, "+", 100, 0),
         ]
         calls = self._call(reads)
+        promote_large_edits(
+            reads,
+            calls,
+            self.ref.amplicons,
+            self.ref.guides,
+            self.ref.guides_by_amplicon,
+            confirmed_excision_ids=set(),
+        )
         row = summarize_efficiency(
             calls, self.ref.guides, {AMP1_NAME: 2}, sample="x"
         )[0]
         self.assertEqual(row.wt_unedited, 1)
         self.assertEqual(row.inconclusive, 1)
         self.assertEqual(row.edited, 0)
+        self.assertEqual(row.edited_deletion_large, 0)
         self.assertEqual(row.reads_spanning_target, 1)
         self.assertEqual(row.pct_editing, 0.0)
+
+    def test_single_site_large_del_promoted_into_pct(self):
+        """Outer-anchor dropout promotes inconclusive → edited_deletion_large."""
+        # Drop near-flanks + guide (~63 bp) but keep coverage-window edges and
+        # far outer anchors (±100) so the read is inconclusive, not not_sequenced.
+        large = AMP1[: GUIDE1_START - 20] + AMP1[GUIDE1_END + 20 :]
+        reads = [
+            _wt_read("w1"),
+            ClassifiedRead("big", large, AMP1_NAME, "+", 100, 0),
+        ]
+        calls = self._call(reads)
+        self.assertEqual(calls[1].status, STATUS_INCONCLUSIVE)
+        promote_large_edits(
+            reads,
+            calls,
+            self.ref.amplicons,
+            self.ref.guides,
+            self.ref.guides_by_amplicon,
+            confirmed_excision_ids=set(),
+        )
+        self.assertEqual(calls[1].status, STATUS_DEL_LARGE)
+        row = summarize_efficiency(
+            calls, self.ref.guides, {AMP1_NAME: 2}, sample="x"
+        )[0]
+        self.assertEqual(row.wt_unedited, 1)
+        self.assertEqual(row.edited_deletion_large, 1)
+        self.assertEqual(row.edited, 1)
+        self.assertEqual(row.inconclusive, 0)
+        self.assertEqual(row.pct_editing, 50.0)
 
 
 class TestCas12Editing(unittest.TestCase):

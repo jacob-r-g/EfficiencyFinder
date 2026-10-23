@@ -88,8 +88,8 @@ class TestPipeline(unittest.TestCase):
                     "Reading FASTQ",
                     "Classifying reads",
                     "Calling editing",
-                    "Measuring indels & alleles",
                     "Calling paired excision",
+                    "Measuring indels & alleles",
                 ],
             )
             self.assertEqual(len(batch.samples), 2)

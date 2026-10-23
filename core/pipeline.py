@@ -11,8 +11,14 @@ from .editing import (
     GuideInspect,
     call_editing_status,
     summarize_efficiency,
+    sync_inspect_after_promote,
 )
-from .excision import ExcisionSizeRow, ExcisionSummary, call_paired_excisions
+from .excision import (
+    ExcisionSizeRow,
+    ExcisionSummary,
+    call_paired_excisions,
+    promote_large_edits,
+)
 from .indel_frame import classify_frame, extract_allele, format_allele_display
 from .parsing import ReferenceSet, parse_fastq, sample_name_from_path
 from .settings import PipelineSettings
@@ -27,8 +33,8 @@ SAMPLE_STAGES = (
     "Reading FASTQ",
     "Classifying reads",
     "Calling editing",
-    "Measuring indels & alleles",
     "Calling paired excision",
+    "Measuring indels & alleles",
 )
 
 
@@ -349,21 +355,32 @@ def run_single_sample(
         settings=settings,
         sample=name,
     )
-    efficiencies = summarize_efficiency(
-        calls, ref_set.guides, amp_read_counts, sample=name
-    )
     stage(4)
-    indel_summaries, allele_summaries, allele_details, indel_size_obs = (
-        _analyze_guide_indels_and_alleles(classified, ref_set, settings, name)
-    )
-    stage(5)
-    excision_summaries, excision_sizes = call_paired_excisions(
+    # Excision uses pre-promote statuses (inconclusive co-occurrence).
+    excision_summaries, excision_sizes, confirmed_ids = call_paired_excisions(
         classified,
         calls,
         ref_set.guides,
         ref_set.guides_by_amplicon,
         settings=settings,
         sample=name,
+    )
+    promote_large_edits(
+        classified,
+        calls,
+        ref_set.amplicons,
+        ref_set.guides,
+        ref_set.guides_by_amplicon,
+        confirmed_ids,
+        settings=settings,
+    )
+    sync_inspect_after_promote(calls, inspect)
+    efficiencies = summarize_efficiency(
+        calls, ref_set.guides, amp_read_counts, sample=name
+    )
+    stage(5)
+    indel_summaries, allele_summaries, allele_details, indel_size_obs = (
+        _analyze_guide_indels_and_alleles(classified, ref_set, settings, name)
     )
     return SampleResult(
         sample_name=name,

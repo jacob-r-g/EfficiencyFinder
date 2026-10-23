@@ -1,4 +1,4 @@
-"""Paired-guide excision detection.
+"""Paired-guide excision detection and efficiency promotion of large edits.
 
 When two (or more) guides cut the same amplicon in one cell, NHEJ can join the
 outer ends and drop the entire intervening fragment. On a spanning read that is
@@ -9,6 +9,9 @@ A confirmed excision additionally matches the leftmost left-flank to the
 rightmost right-flank and finds a dropout spanning most of the expected
 intervening distance. That size is real biology, not a concatemer artifact,
 so it is *not* filtered by artifact_size_threshold.
+
+promote_large_edits then upgrades confirmed dual-guide excisions and measurable
+single-site large dropouts so they enter Efficiency pct_editing.
 """
 
 from collections import Counter
@@ -16,13 +19,22 @@ from dataclasses import dataclass
 from math import nan
 from statistics import median
 
-from .editing import STATUS_DEL_LARGE, STATUS_INCONCLUSIVE, STATUS_NOT_SEQUENCED
+from .editing import (
+    STATUS_DEL_LARGE,
+    STATUS_EXCISION,
+    STATUS_INCONCLUSIVE,
+    STATUS_NOT_SEQUENCED,
+    ReadGuideCall,
+)
 from .matching import find_best_match
 from .settings import PipelineSettings
 
 # Co-occurrence signature for paired excision: local flanks failed at every guide
-# (inconclusive) or legacy large-del calls.
+# (inconclusive) or legacy large-del calls. Excision runs on pre-promote calls.
 _FLANK_FAIL_STATUSES = frozenset({STATUS_INCONCLUSIVE, STATUS_DEL_LARGE})
+
+# Outer anchors beyond near-flanks for single-guide large-deletion promotion.
+_OUTER_OFFSET = 100
 
 
 @dataclass
@@ -82,6 +94,63 @@ def _measure_dropout(read_seq, left_gi, right_gi, mismatch_thresh_flank: int):
     return wt_flank_gap - observed_gap
 
 
+def _measure_outer_dropout(
+    read_seq: str,
+    amp_seq: str,
+    gi,
+    mismatch_thresh_flank: int,
+    outer_offset: int = _OUTER_OFFSET,
+) -> int | None:
+    """Dropout using flanks placed outer_offset bp beyond the near-flanks.
+
+    Returns measured deletion size (WT outer gap − observed), or None.
+    """
+    flank_len = len(gi.left_flank)
+    if flank_len < 1:
+        return None
+    l0 = max(0, gi.target_start - len(gi.left_flank) - outer_offset)
+    l1 = l0 + flank_len
+    r1 = min(len(amp_seq), gi.target_end + len(gi.right_flank) + outer_offset)
+    r0 = r1 - flank_len
+    if l1 > r0 or l1 > len(amp_seq) or r0 < 0:
+        return None
+    lf = amp_seq[l0:l1]
+    rf = amp_seq[r0:r1]
+    if len(lf) != flank_len or len(rf) != flank_len:
+        return None
+    wt_gap = r0 - l1
+    lpos, lmm = find_best_match(lf, read_seq)
+    rpos, rmm = find_best_match(rf, read_seq)
+    l_ok = lpos is not None and lmm <= mismatch_thresh_flank
+    r_ok = rpos is not None and rmm <= mismatch_thresh_flank
+    if not (l_ok and r_ok):
+        return None
+    if rpos < lpos + len(lf) - 5:
+        return None
+    observed_gap = rpos - (lpos + len(lf))
+    return wt_gap - observed_gap
+
+
+def _walk_per_read(classified_reads, editing_calls, guides_by_amplicon):
+    """Lockstep walk of classified reads with their per-guide editing calls."""
+    per_read: list[tuple[object, list[ReadGuideCall]]] = []
+    call_i = 0
+    for cr in classified_reads:
+        if cr.amplicon is None:
+            continue
+        gnames = guides_by_amplicon.get(cr.amplicon, [])
+        if not gnames:
+            continue
+        slice_calls: list[ReadGuideCall] = []
+        for _ in gnames:
+            if call_i >= len(editing_calls):
+                break
+            slice_calls.append(editing_calls[call_i])
+            call_i += 1
+        per_read.append((cr, slice_calls))
+    return per_read
+
+
 def call_paired_excisions(
     classified_reads,
     editing_calls,
@@ -89,7 +158,7 @@ def call_paired_excisions(
     guides_by_amplicon,
     settings: PipelineSettings | None = None,
     sample: str = "",
-) -> tuple[list[ExcisionSummary], list[ExcisionSizeRow]]:
+) -> tuple[list[ExcisionSummary], list[ExcisionSizeRow], set[int]]:
     """Detect paired/multi-guide excision events per amplicon.
 
     An amplicon is only considered if it has 2+ guides. A spanning read is a
@@ -99,30 +168,18 @@ def call_paired_excisions(
     max(min_excision_bp, expected_cut_to_cut * min_excision_fraction).
     Expected dropout is the distance between SpCas9 cut sites (3 bp upstream
     of each NGG PAM), not the full guide-span.
+
+    Returns (summaries, size_rows, confirmed_cr_ids) where confirmed_cr_ids is
+    a set of id(classified_read) for confirmed excision molecules. Callers must
+    promote efficiency using those ids on a copy of the pre-promote calls so
+    this tab keeps the co-occurrence signature.
     """
     s = settings or PipelineSettings()
-
-    # Walk classified reads and editing calls in lockstep (same order as
-    # call_editing_status). Do not key on read_id — FASTQ IDs can collide.
-    per_read: list[tuple[object, dict[str, str]]] = []
-    call_i = 0
-    for cr in classified_reads:
-        if cr.amplicon is None:
-            continue
-        gnames = guides_by_amplicon.get(cr.amplicon, [])
-        if not gnames:
-            continue
-        gst: dict[str, str] = {}
-        for _ in gnames:
-            if call_i >= len(editing_calls):
-                break
-            c = editing_calls[call_i]
-            call_i += 1
-            gst[c.guide] = c.status
-        per_read.append((cr, gst))
+    per_read = _walk_per_read(classified_reads, editing_calls, guides_by_amplicon)
 
     summaries: list[ExcisionSummary] = []
     size_rows: list[ExcisionSizeRow] = []
+    confirmed_cr_ids: set[int] = set()
 
     for amp, gnames in guides_by_amplicon.items():
         if len(gnames) < 2:
@@ -137,9 +194,10 @@ def call_paired_excisions(
         both_large = 0
         confirmed_sizes: list[int] = []
 
-        for cr, gst in per_read:
+        for cr, slice_calls in per_read:
             if cr.amplicon != amp:
                 continue
+            gst = {c.guide: c.status for c in slice_calls}
             if any(gst.get(g) == STATUS_NOT_SEQUENCED for g in ordered):
                 continue
             spanning += 1
@@ -151,6 +209,7 @@ def call_paired_excisions(
             )
             if dropout is not None and dropout >= min_drop:
                 confirmed_sizes.append(dropout)
+                confirmed_cr_ids.add(id(cr))
 
         size_counts = Counter(confirmed_sizes)
         n_conf = len(confirmed_sizes)
@@ -184,4 +243,51 @@ def call_paired_excisions(
         )
 
     summaries.sort(key=lambda r: (r.sample, r.amplicon))
-    return summaries, size_rows
+    return summaries, size_rows, confirmed_cr_ids
+
+
+def promote_large_edits(
+    classified_reads,
+    editing_calls: list[ReadGuideCall],
+    amplicons,
+    guides,
+    guides_by_amplicon,
+    confirmed_excision_ids: set[int],
+    settings: PipelineSettings | None = None,
+) -> list[ReadGuideCall]:
+    """Promote evidence-backed large edits for Efficiency accounting.
+
+    - Confirmed dual-guide excision reads → edited_excision on every guide.
+    - Remaining inconclusive with measurable outer-flank large dropout →
+      edited_deletion_large.
+    Unverified inconclusive is left unchanged (excluded from pct_editing).
+
+    Mutates and returns the same call list. Run excision on the pre-promote
+    statuses first so Paired excision is unchanged.
+    """
+    s = settings or PipelineSettings()
+    per_read = _walk_per_read(classified_reads, editing_calls, guides_by_amplicon)
+
+    for cr, slice_calls in per_read:
+        if id(cr) in confirmed_excision_ids:
+            for c in slice_calls:
+                if c.status != STATUS_NOT_SEQUENCED:
+                    c.status = STATUS_EXCISION
+            continue
+
+        amp_seq = amplicons[cr.amplicon]
+        for c in slice_calls:
+            if c.status != STATUS_INCONCLUSIVE:
+                continue
+            gi = guides[c.guide]
+            expected_local = max(gi.target_end - gi.target_start, 1)
+            min_drop = max(
+                s.min_excision_bp, int(expected_local * s.min_excision_fraction)
+            )
+            dropout = _measure_outer_dropout(
+                cr.oriented_seq, amp_seq, gi, s.mismatch_thresh_flank
+            )
+            if dropout is not None and dropout >= min_drop:
+                c.status = STATUS_DEL_LARGE
+
+    return editing_calls

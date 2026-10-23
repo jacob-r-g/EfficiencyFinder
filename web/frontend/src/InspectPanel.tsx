@@ -12,6 +12,7 @@ const EDITED = new Set([
   "edited_insertion",
   "edited_deletion_small",
   "edited_deletion_large",
+  "edited_excision",
   "edited_substitution",
 ]);
 

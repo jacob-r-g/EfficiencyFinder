@@ -587,6 +587,7 @@ tbody tr.selected {
 .insp-status-edited_insertion,
 .insp-status-edited_deletion_small,
 .insp-status-edited_deletion_large,
+.insp-status-edited_excision,
 .insp-status-edited_substitution {
   background: #fecaca;
 }

@@ -91,7 +91,8 @@ export default function DocsPanel() {
         On amplicons with two guides where only one is active in your line, editing at
         the other guide is scored only in the nuclease WT window (Cas9: 3 bp up + 3 bp
         down of the cut; Cas12: spacer 16–23). Distal nanopore ±1 noise usually stays
-        WT; missing flanks are inconclusive, not counted as editing.
+        WT; missing near-flanks are inconclusive unless a confirmed large deletion or
+        dual-guide excision is measured.
       </p>
 
       <h2>Efficiency tab</h2>
@@ -106,13 +107,16 @@ export default function DocsPanel() {
       </p>
       <p>
         <strong>Call rules (cut-local WT).</strong> Match left and right flanks around
-        the guide. If either flank fails → <code>inconclusive</code> (cannot place the
-        cut; excluded from <code>pct_editing</code>). If both flanks match: require the
-        nuclease WT window to match the reference exactly → <code>WT_intact</code>.
-        SpCas9 uses 3 bp upstream + 3 bp downstream of the blunt cut; Cas12a uses
-        spacer positions 16–23. Distal spacer length noise outside that window does{" "}
-        <em>not</em> count as editing. If the WT window is disrupted, classify by gap
-        length as insertion, small deletion, or substitution.
+        the guide. If both flanks match: require the nuclease WT window to match the
+        reference exactly → <code>WT_intact</code>. SpCas9 uses 3 bp upstream + 3 bp
+        downstream of the blunt cut; Cas12a uses spacer positions 16–23. Distal spacer
+        length noise outside that window does <em>not</em> count as editing. If the WT
+        window is disrupted, classify by gap length as insertion, small deletion, or
+        substitution. If near-flanks fail, the read starts as{" "}
+        <code>inconclusive</code>; confirmed dual-guide excision becomes{" "}
+        <code>edited_excision</code>, and a measurable single-site outer dropout becomes{" "}
+        <code>edited_deletion_large</code>. Only unverified flank failures stay
+        inconclusive and excluded from <code>pct_editing</code>.
       </p>
       <p>
         <strong>Inspect.</strong> On the Efficiency tab, select a row to open a local
@@ -134,15 +138,16 @@ export default function DocsPanel() {
           Excluded from <code>pct_editing</code>.
         </Term>
         <Term name="inconclusive">
-          Guide window is covered but near-flanks could not be placed, so the cut site
-          cannot be checked. Excluded from <code>pct_editing</code>. Common for large
-          dropouts; paired-excision uses this co-occurrence across guides.
+          Guide window is covered but near-flanks failed and no confirmed large dropout
+          or dual-guide excision could be measured. Excluded from{" "}
+          <code>pct_editing</code>.
         </Term>
         <Term name="wt_unedited">
           Both flanks match and the nuclease WT window is letter-identical to WT.
         </Term>
         <Term name="edited">
-          Conclusive calls that are not WT (WT window disrupted).
+          All conclusive non-WT calls: local indels/subs, single-site large deletions,
+          and dual-guide excisions.
         </Term>
         <Term name="edited_insertion">
           Cut window disrupted; observed flank-to-flank gap longer than the WT target.
@@ -151,14 +156,19 @@ export default function DocsPanel() {
           Cut window disrupted; observed gap shorter than the WT target.
         </Term>
         <Term name="edited_deletion_large">
-          Reserved for rare large-del classifications; missing flanks are{" "}
-          <code>inconclusive</code>, not this status.
+          Single-site large deletion: near-flanks failed but outer anchors measure a
+          large dropout at this guide alone.
+        </Term>
+        <Term name="edited_excision">
+          Confirmed dual-/multi-guide excision (outer-flank dropout across the cut-to-cut
+          span). Counted as edited for every guide on that amplicon.
         </Term>
         <Term name="edited_substitution">
           Cut window disrupted while flank-to-flank gap length still equals WT.
         </Term>
         <Term name="pct_editing">
-          <code>100 × edited / reads_spanning_target</code>. Empty spanning set → blank/NA.
+          <code>100 × edited / reads_spanning_target</code> where edited includes all
+          edit types above. Empty spanning set → blank/NA.
         </Term>
       </dl>
 
@@ -239,9 +249,10 @@ export default function DocsPanel() {
       </p>
       <ul>
         <li>
-          A read is a candidate when <em>every</em> guide on that amplicon is
-          <code>inconclusive</code> (local flanks failed; none are{" "}
-          <code>not_sequenced</code>).
+          A read is a candidate when <em>every</em> guide on that amplicon failed
+          local near-flanks before efficiency promotion (none are{" "}
+          <code>not_sequenced</code>). Confirmed events are also counted as{" "}
+          <code>edited_excision</code> on the Efficiency tab.
         </li>
         <li>
           Confirmation matches the leftmost guide’s left flank to the rightmost guide’s

@@ -5,11 +5,12 @@ from pathlib import Path
 from core.classify import ClassifiedRead
 from core.editing import (
     STATUS_DEL_SMALL,
+    STATUS_EXCISION,
     STATUS_INCONCLUSIVE,
     STATUS_WT,
     call_editing_status,
 )
-from core.excision import call_paired_excisions
+from core.excision import call_paired_excisions, promote_large_edits
 from core.parsing import load_reference_set
 from core.pipeline import run_single_sample
 from core.settings import PipelineSettings
@@ -46,7 +47,7 @@ class TestPairedExcision(unittest.TestCase):
             self.ref.guides_by_amplicon,
             self.settings,
         )
-        summaries, sizes = call_paired_excisions(
+        summaries, sizes, confirmed = call_paired_excisions(
             [cr], calls, self.ref.guides, self.ref.guides_by_amplicon, self.settings, "s"
         )
         self.assertEqual(len(summaries), 1)
@@ -54,6 +55,7 @@ class TestPairedExcision(unittest.TestCase):
         self.assertEqual(summaries[0].n_simultaneous_large_del, 0)
         self.assertEqual(summaries[0].n_confirmed_excision, 0)
         self.assertEqual(sizes, [])
+        self.assertEqual(confirmed, set())
 
     def test_intervening_dropout_is_confirmed_excision(self):
         cr = ClassifiedRead("ex", AMP2_EXCISION, AMP2_NAME, "+", 100, 0)
@@ -68,7 +70,7 @@ class TestPairedExcision(unittest.TestCase):
         self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_INCONCLUSIVE)
         self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_INCONCLUSIVE)
 
-        summaries, sizes = call_paired_excisions(
+        summaries, sizes, confirmed = call_paired_excisions(
             [cr], calls, self.ref.guides, self.ref.guides_by_amplicon, self.settings, "s"
         )
         row = summaries[0]
@@ -85,6 +87,20 @@ class TestPairedExcision(unittest.TestCase):
         self.assertEqual(row.median_excision_bp, float(measured))
         self.assertEqual(sizes[0].excision_size_bp, measured)
         self.assertEqual(sizes[0].n_reads, 1)
+        self.assertEqual(confirmed, {id(cr)})
+
+        promote_large_edits(
+            [cr],
+            calls,
+            self.ref.amplicons,
+            self.ref.guides,
+            self.ref.guides_by_amplicon,
+            confirmed,
+            self.settings,
+        )
+        by_guide = {c.guide: c.status for c in calls}
+        self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_EXCISION)
+        self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_EXCISION)
 
     def test_single_guide_small_indel_is_not_paired_excision(self):
         # Independent 5 bp deletion across guide-1 cut; guide 2 remains WT.
@@ -101,11 +117,12 @@ class TestPairedExcision(unittest.TestCase):
         by_guide = {c.guide: c.status for c in calls}
         self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_DEL_SMALL)
         self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_WT)
-        summaries, _sizes = call_paired_excisions(
+        summaries, _sizes, confirmed = call_paired_excisions(
             [cr], calls, self.ref.guides, self.ref.guides_by_amplicon, self.settings, "s"
         )
         self.assertEqual(summaries[0].n_simultaneous_large_del, 0)
         self.assertEqual(summaries[0].n_confirmed_excision, 0)
+        self.assertEqual(confirmed, set())
 
     def test_pipeline_counts_excision_among_mixed_reads(self):
         with tempfile.TemporaryDirectory() as td:
@@ -123,6 +140,15 @@ class TestPairedExcision(unittest.TestCase):
             self.assertEqual(row.n_simultaneous_large_del, 3)
             self.assertEqual(row.n_confirmed_excision, 3)
             self.assertEqual(row.pct_simultaneous_large_del, 60.0)
+            # Efficiency counts confirmed excision as edited on both guides.
+            by_guide = {e.guide: e for e in result.efficiencies}
+            for gname in (GUIDE2A_NAME, GUIDE2B_NAME):
+                eff = by_guide[gname]
+                self.assertEqual(eff.edited_excision, 3)
+                self.assertEqual(eff.wt_unedited, 2)
+                self.assertEqual(eff.edited, 3)
+                self.assertEqual(eff.pct_editing, 60.0)
+                self.assertEqual(eff.inconclusive, 0)
 
 
 if __name__ == "__main__":
