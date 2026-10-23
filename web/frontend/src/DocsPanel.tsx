@@ -157,7 +157,9 @@ export default function DocsPanel() {
         </Term>
         <Term name="edited_deletion_large">
           Single-site large deletion: near-flanks failed but outer anchors measure a
-          large dropout at this guide alone.
+          large dropout at this guide alone. Not applied when every guide on a
+          multi-guide amplicon is inconclusive without a confirmed paired excision
+          (avoids splitting one molecule across guides).
         </Term>
         <Term name="edited_excision">
           Confirmed dual-/multi-guide excision (outer-flank dropout across the cut-to-cut

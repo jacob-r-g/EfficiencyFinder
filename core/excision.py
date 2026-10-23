@@ -258,8 +258,12 @@ def promote_large_edits(
     """Promote evidence-backed large edits for Efficiency accounting.
 
     - Confirmed dual-guide excision reads → edited_excision on every guide.
-    - Remaining inconclusive with measurable outer-flank large dropout →
-      edited_deletion_large.
+    - Remaining single-site inconclusive with measurable outer-flank large
+      dropout → edited_deletion_large.
+    - On multi-guide amplicons where every sequenced guide is still
+      inconclusive (excision not confirmed), do **not** promote via per-guide
+      outer anchors — that would asymmetrically edit one guide and leave the
+      other inconclusive on the same molecule. Leave them inconclusive.
     Unverified inconclusive is left unchanged (excluded from pct_editing).
 
     Mutates and returns the same call list. Run excision on the pre-promote
@@ -273,6 +277,14 @@ def promote_large_edits(
             for c in slice_calls:
                 if c.status != STATUS_NOT_SEQUENCED:
                     c.status = STATUS_EXCISION
+            continue
+
+        sequenced = [c for c in slice_calls if c.status != STATUS_NOT_SEQUENCED]
+        if (
+            len(sequenced) >= 2
+            and all(c.status == STATUS_INCONCLUSIVE for c in sequenced)
+        ):
+            # Co-occurrence without confirmed excision: keep symmetric.
             continue
 
         amp_seq = amplicons[cr.amplicon]

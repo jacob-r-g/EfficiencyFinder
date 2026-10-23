@@ -405,6 +405,5 @@ def sync_inspect_after_promote(
                     if new_status == STATUS_EXCISION:
                         ex.note = _status_note(STATUS_EXCISION, 0, 0)
                     elif new_status == STATUS_DEL_LARGE:
-                        ex.note = _status_note(
-                            STATUS_DEL_LARGE, ex.observed_gap, ex.expected_gap
-                        )
+                        # Pre-promote inconclusive examples have no measured gap.
+                        ex.note = "Large single-site dropout (outer-anchor confirmation)"

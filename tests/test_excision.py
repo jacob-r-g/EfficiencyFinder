@@ -124,6 +124,34 @@ class TestPairedExcision(unittest.TestCase):
         self.assertEqual(summaries[0].n_confirmed_excision, 0)
         self.assertEqual(confirmed, set())
 
+    def test_unconfirmed_dual_inconclusive_not_promoted_asymmetrically(self):
+        """All-guide inconclusive without confirmed excision stays inconclusive.
+
+        Per-guide outer promotion must not upgrade one guide and leave the other
+        inconclusive on the same molecule.
+        """
+        cr = ClassifiedRead("ex", AMP2_EXCISION, AMP2_NAME, "+", 100, 0)
+        calls, _ = call_editing_status(
+            [cr],
+            self.ref.amplicons,
+            self.ref.guides,
+            self.ref.guides_by_amplicon,
+            self.settings,
+        )
+        # Force "not confirmed" even if outer measure would succeed.
+        promote_large_edits(
+            [cr],
+            calls,
+            self.ref.amplicons,
+            self.ref.guides,
+            self.ref.guides_by_amplicon,
+            confirmed_excision_ids=set(),
+            settings=self.settings,
+        )
+        by_guide = {c.guide: c.status for c in calls}
+        self.assertEqual(by_guide[GUIDE2A_NAME], STATUS_INCONCLUSIVE)
+        self.assertEqual(by_guide[GUIDE2B_NAME], STATUS_INCONCLUSIVE)
+
     def test_pipeline_counts_excision_among_mixed_reads(self):
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
