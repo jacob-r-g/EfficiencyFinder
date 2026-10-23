@@ -42,10 +42,24 @@ export default function IndelHistogram({ sizes, title }: Props) {
         }}
         options={{
           maintainAspectRatio: false,
+          responsive: true,
           plugins: { legend: { display: false } },
           scales: {
-            x: { title: { display: true, text: "Net indel size (bp)" } },
-            y: { title: { display: true, text: "Reads" }, beginAtZero: true },
+            x: {
+              title: {
+                display: true,
+                text: "Net indel size (bp)",
+                color: "#333",
+              },
+              ticks: { color: "#444", maxRotation: 0, autoSkip: true },
+              grid: { color: "rgba(0,0,0,0.06)" },
+            },
+            y: {
+              title: { display: true, text: "Reads", color: "#333" },
+              ticks: { color: "#444", precision: 0 },
+              beginAtZero: true,
+              grid: { color: "rgba(0,0,0,0.08)" },
+            },
           },
         }}
       />
